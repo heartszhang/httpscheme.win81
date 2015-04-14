@@ -1,0 +1,18 @@
+#include <sdkddkver.h>
+import "inspectable.idl";
+import "Windows.Foundation.idl";
+import "Windows.Media.idl";
+#define COMPONENT_VERSION 1.0
+
+//This file name Demo.idl must match Project name and root namespace exactly, Demo.idl = Demo.vcxproj = Demo. case sensitive
+namespace hls{namespace httpschemeproxy{
+  interface Windows.Media.IMediaExtension;
+  runtimeclass HttpSchemeHandler;
+
+  [version(COMPONENT_VERSION)]
+  [activatable(COMPONENT_VERSION)]
+  runtimeclass HttpSchemeHandler{
+    [default] interface Windows.Media.IMediaExtension;
+  }
+}}
+
