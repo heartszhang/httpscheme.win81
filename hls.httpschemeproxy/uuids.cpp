@@ -1,0 +1,3445 @@
+#include "pch.h"
+#include <uuids.h>
+#include <ksuuids.h>
+#include <propkey.h>
+#include <codecapi.h>
+#include <wmcodecdsp.h>
+#include <wmcontainer.h>
+#include <wmsdkidl.h>
+#include <encdec.h>
+#include <strsafe.h>
+
+#if !(WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP))
+#define INITGUID
+#ifdef DEFINE_GUID
+#undef DEFINE_GUID
+#endif
+#define DEFINE_GUID(name, l, w1, w2, b1, b2, b3, b4, b5, b6, b7, b8) \
+        EXTERN_C const GUID DECLSPEC_SELECTANY name \
+                = { l, w1, w2, { b1, b2,  b3,  b4,  b5,  b6,  b7,  b8 } }
+
+// {73d1072d-1870-4174-a063-29ff4ff6c11e}
+DEFINE_GUID( MF_MT_AM_FORMAT_TYPE,
+             0x73d1072d, 0x1870, 0x4174, 0xa0, 0x63, 0x29, 0xff, 0x4f, 0xf6, 0xc1, 0x1e );
+
+// {5A75B249-0D7D-49a1-A1C3-E0D87F0CADE5}   MF_MT_ARBITRARY_FORMAT          {Blob}
+DEFINE_GUID( MF_MT_ARBITRARY_FORMAT,
+             0x5a75b249, 0xd7d, 0x49a1, 0xa1, 0xc3, 0xe0, 0xd8, 0x7f, 0xc, 0xad, 0xe5 ); 
+// {d7be3fe0-2bc7-492d-b843-61a1919b70c3}   MF_MT_ORIGINAL_4CC               (UINT32);
+DEFINE_GUID( MF_MT_ORIGINAL_4CC,
+             0xd7be3fe0, 0x2bc7, 0x492d, 0xb8, 0x43, 0x61, 0xa1, 0x91, 0x9b, 0x70, 0xc3 );
+// {8cbbc843-9fd9-49c2-882f-a72586c408ad}   MF_MT_ORIGINAL_WAVE_FORMAT_TAG   (UINT32);
+DEFINE_GUID( MF_MT_ORIGINAL_WAVE_FORMAT_TAG,
+             0x8cbbc843, 0x9fd9, 0x49c2, 0x88, 0x2f, 0xa7, 0x25, 0x86, 0xc4, 0x08, 0xad );
+//DEFINE_GUID( MFPKEY_SourceOpenMonitor ,
+             //0x074d4637, 0xb5ae, 0x465d, 0xaf, 0x17, 0x1a, 0x53, 0x8d, 0x28, 0x59, 0xdd , 0x02 );
+DEFINE_GUID( AM_MEDIA_TYPE_REPRESENTATION,
+             0xe2e42ad2, 0x132c, 0x491e, 0xa2, 0x68, 0x3c, 0x7c, 0x2d, 0xca, 0x18, 0x1f );
+DEFINE_GUID( FORMAT_MFVideoFormat,
+             0xaed4ab2d, 0x7326, 0x43cb, 0x94, 0x64, 0xc8, 0x79, 0xca, 0xb9, 0xc4, 0x3d );
+#define MEDIATYPE_NULL       GUID_NULL
+#define MEDIASUBTYPE_NULL    GUID_NULL
+// -- Use this subtype if you don't have a use for a subtype for your type
+// e436eb8e-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_None
+DEFINE_GUID( MEDIASUBTYPE_None,
+             0xe436eb8e, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+
+// -- major types ---
+
+
+// 73646976-0000-0010-8000-00AA00389B71  'vids' == MEDIATYPE_Video
+DEFINE_GUID( MEDIATYPE_Video,
+             0x73646976, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 73647561-0000-0010-8000-00AA00389B71  'auds' == MEDIATYPE_Audio
+DEFINE_GUID( MEDIATYPE_Audio,
+             0x73647561, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 73747874-0000-0010-8000-00AA00389B71  'txts' == MEDIATYPE_Text
+DEFINE_GUID( MEDIATYPE_Text,
+             0x73747874, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 7364696D-0000-0010-8000-00AA00389B71  'mids' == MEDIATYPE_Midi
+DEFINE_GUID( MEDIATYPE_Midi,
+             0x7364696D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// e436eb83-524f-11ce-9f53-0020af0ba770            MEDIATYPE_Stream
+DEFINE_GUID( MEDIATYPE_Stream,
+             0xe436eb83, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// 73(s)76(v)61(a)69(i)-0000-0010-8000-00AA00389B71  'iavs' == MEDIATYPE_Interleaved
+DEFINE_GUID( MEDIATYPE_Interleaved,
+             0x73766169, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 656c6966-0000-0010-8000-00AA00389B71  'file' == MEDIATYPE_File
+DEFINE_GUID( MEDIATYPE_File,
+             0x656c6966, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 73636d64-0000-0010-8000-00AA00389B71  'scmd' == MEDIATYPE_ScriptCommand
+DEFINE_GUID( MEDIATYPE_ScriptCommand,
+             0x73636d64, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 670AEA80-3A82-11d0-B79B-00AA003767A7            MEDIATYPE_AUXLine21Data
+DEFINE_GUID( MEDIATYPE_AUXLine21Data,
+             0x670aea80, 0x3a82, 0x11d0, 0xb7, 0x9b, 0x0, 0xaa, 0x0, 0x37, 0x67, 0xa7 );
+
+// {11264ACB-37DE-4eba-8C35-7F04A1A68332}
+DEFINE_GUID( MEDIATYPE_AUXTeletextPage,
+             0x11264acb, 0x37de, 0x4eba, 0x8c, 0x35, 0x7f, 0x4, 0xa1, 0xa6, 0x83, 0x32 );
+
+// AEB312E9-3357-43ca-B701-97EC198E2B62            MEDIATYPE_CC_CONTAINER
+DEFINE_GUID( MEDIATYPE_CC_CONTAINER,
+             0xaeb312e9, 0x3357, 0x43ca, 0xb7, 0x1, 0x97, 0xec, 0x19, 0x8e, 0x2b, 0x62 );
+
+// FB77E152-53B2-499c-B46B-509FC33EDFD7             MEDIATYPE_DTVCCData
+DEFINE_GUID( MEDIATYPE_DTVCCData,
+             0xfb77e152, 0x53b2, 0x499c, 0xb4, 0x6b, 0x50, 0x9f, 0xc3, 0x3e, 0xdf, 0xd7 );
+
+// B88B8A89-B049-4C80-ADCF-5898985E22C1             MEDIATYPE_MSTVCaption
+DEFINE_GUID( MEDIATYPE_MSTVCaption,
+             0xB88B8A89, 0xB049, 0x4C80, 0xAD, 0xCF, 0x58, 0x98, 0x98, 0x5E, 0x22, 0xC1 );
+
+// F72A76E1-EB0A-11D0-ACE4-0000C0CC16BA            MEDIATYPE_VBI
+DEFINE_GUID( MEDIATYPE_VBI,
+             0xf72a76e1, 0xeb0a, 0x11d0, 0xac, 0xe4, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+// 34FFCBC3-D5B3-4171-9002-D4C60301697F             DVB_SUBTITLES
+DEFINE_GUID( MEDIASUBTYPE_DVB_SUBTITLES,
+             0x34FFCBC3, 0xD5B3, 0x4171, 0x90, 0x02, 0xD4, 0xC6, 0x03, 0x01, 0x69, 0x7F );
+
+// 059DD67D-2E55-4d41-8D1B-01F5E4F50607            ISDB_CAPTIONS
+DEFINE_GUID( MEDIASUBTYPE_ISDB_CAPTIONS,
+             0x059dd67d, 0x2e55, 0x4d41, 0x8d, 0x1b, 0x01, 0xf5, 0xe4, 0xf5, 0x06, 0x07 );
+
+// 36dc6d28-f1a6-4216-9048-9cfcefeb5eba            ISDB_SUPERIMPOSE
+DEFINE_GUID( MEDIASUBTYPE_ISDB_SUPERIMPOSE,
+             0x36dc6d28, 0xf1a6, 0x4216, 0x90, 0x48, 0x9c, 0xfc, 0xef, 0xeb, 0x5e, 0xba );
+
+// 0482DEE3-7817-11cf-8a03-00aa006ecb65            MEDIATYPE_Timecode
+DEFINE_GUID( MEDIATYPE_Timecode,
+             0x482dee3, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// 74726c6d-0000-0010-8000-00AA00389B71  'lmrt' == MEDIATYPE_LMRT
+DEFINE_GUID( MEDIATYPE_LMRT,
+             0x74726c6d, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 74726c6d-0000-0010-8000-00AA00389B71  'urls' == MEDIATYPE_URL_STREAM
+DEFINE_GUID( MEDIATYPE_URL_STREAM,
+             0x736c7275, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// -- sub types ---
+
+// 4C504C43-0000-0010-8000-00AA00389B71  'CLPL' == MEDIASUBTYPE_CLPL
+DEFINE_GUID( MEDIASUBTYPE_CLPL,
+             0x4C504C43, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 56595559-0000-0010-8000-00AA00389B71  'YUYV' == MEDIASUBTYPE_YUYV
+DEFINE_GUID( MEDIASUBTYPE_YUYV,
+             0x56595559, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 56555949-0000-0010-8000-00AA00389B71  'IYUV' == MEDIASUBTYPE_IYUV
+DEFINE_GUID( MEDIASUBTYPE_IYUV,
+             0x56555949, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 39555659-0000-0010-8000-00AA00389B71  'YVU9' == MEDIASUBTYPE_YVU9
+DEFINE_GUID( MEDIASUBTYPE_YVU9,
+             0x39555659, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 31313459-0000-0010-8000-00AA00389B71  'Y411' == MEDIASUBTYPE_Y411
+DEFINE_GUID( MEDIASUBTYPE_Y411,
+             0x31313459, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 50313459-0000-0010-8000-00AA00389B71  'Y41P' == MEDIASUBTYPE_Y41P
+DEFINE_GUID( MEDIASUBTYPE_Y41P,
+             0x50313459, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 32595559-0000-0010-8000-00AA00389B71  'YUY2' == MEDIASUBTYPE_YUY2
+DEFINE_GUID( MEDIASUBTYPE_YUY2,
+             0x32595559, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 55595659-0000-0010-8000-00AA00389B71  'YVYU' == MEDIASUBTYPE_YVYU
+DEFINE_GUID( MEDIASUBTYPE_YVYU,
+             0x55595659, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 59565955-0000-0010-8000-00AA00389B71  'UYVY' ==  MEDIASUBTYPE_UYVY
+DEFINE_GUID( MEDIASUBTYPE_UYVY,
+             0x59565955, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 31313259-0000-0010-8000-00AA00389B71  'Y211' ==  MEDIASUBTYPE_Y211
+DEFINE_GUID( MEDIASUBTYPE_Y211,
+             0x31313259, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 524a4c43-0000-0010-8000-00AA00389B71  'CLJR' ==  MEDIASUBTYPE_CLJR
+DEFINE_GUID( MEDIASUBTYPE_CLJR,
+             0x524a4c43, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 39304649-0000-0010-8000-00AA00389B71  'IF09' ==  MEDIASUBTYPE_IF09
+DEFINE_GUID( MEDIASUBTYPE_IF09,
+             0x39304649, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 414c5043-0000-0010-8000-00AA00389B71  'CPLA' ==  MEDIASUBTYPE_CPLA
+DEFINE_GUID( MEDIASUBTYPE_CPLA,
+             0x414c5043, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 47504A4D-0000-0010-8000-00AA00389B71            MEDIASUBTYPE_MJPG
+DEFINE_GUID( MEDIASUBTYPE_MJPG,
+             0x47504A4D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 4A4D5654-0000-0010-8000-00AA00389B71            MEDIASUBTYPE_TVMJ
+DEFINE_GUID( MEDIASUBTYPE_TVMJ,
+             0x4A4D5654, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 454B4157-0000-0010-8000-00AA00389B71            MEDIASUBTYPE_WAKE
+DEFINE_GUID( MEDIASUBTYPE_WAKE,
+             0x454B4157, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 43434643-0000-0010-8000-00AA00389B71            MEDIASUBTYPE_CFCC
+DEFINE_GUID( MEDIASUBTYPE_CFCC,
+             0x43434643, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 47504A49-0000-0010-8000-00AA00389B71            MEDIASUBTYPE_IJPG
+DEFINE_GUID( MEDIASUBTYPE_IJPG,
+             0x47504A49, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 6D756C50-0000-0010-8000-00AA00389B71            MEDIASUBTYPE_Plum
+DEFINE_GUID( MEDIASUBTYPE_Plum,
+             0x6D756C50, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// FAST DV-Master
+// 53435644-0000-0010-8000-00AA00389B71            MEDIASUBTYPE_DVCS
+DEFINE_GUID( MEDIASUBTYPE_DVCS,
+             0x53435644, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// H.264 compressed video stream
+// 34363248-0000-0010-8000-00AA00389B71  'H264' == MEDIASUBTYPE_H264
+DEFINE_GUID( MEDIASUBTYPE_H264,
+             0x34363248, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// FAST DV-Master
+// 44535644-0000-0010-8000-00AA00389B71            MEDIASUBTYPE_DVSD
+DEFINE_GUID( MEDIASUBTYPE_DVSD,
+             0x44535644, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// MIROVideo DV
+// 4656444D-0000-0010-8000-00AA00389B71            MEDIASUBTYPE_MDVF
+DEFINE_GUID( MEDIASUBTYPE_MDVF,
+             0x4656444D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// e436eb78-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB1
+// e436eb78-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB1
+DEFINE_GUID( MEDIASUBTYPE_RGB1,
+             0xe436eb78, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436eb79-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB4
+DEFINE_GUID( MEDIASUBTYPE_RGB4,
+             0xe436eb79, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436eb7a-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB8
+DEFINE_GUID( MEDIASUBTYPE_RGB8,
+             0xe436eb7a, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436eb7b-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB565
+DEFINE_GUID( MEDIASUBTYPE_RGB565,
+             0xe436eb7b, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436eb7c-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB555
+DEFINE_GUID( MEDIASUBTYPE_RGB555,
+             0xe436eb7c, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436eb7d-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB24
+DEFINE_GUID( MEDIASUBTYPE_RGB24,
+             0xe436eb7d, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436eb7e-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB32
+DEFINE_GUID( MEDIASUBTYPE_RGB32,
+             0xe436eb7e, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+
+//
+// RGB surfaces that contain per pixel alpha values.
+//
+
+// 297C55AF-E209-4cb3-B757-C76D6B9C88A8            MEDIASUBTYPE_ARGB1555
+DEFINE_GUID( MEDIASUBTYPE_ARGB1555,
+             0x297c55af, 0xe209, 0x4cb3, 0xb7, 0x57, 0xc7, 0x6d, 0x6b, 0x9c, 0x88, 0xa8 );
+
+// 6E6415E6-5C24-425f-93CD-80102B3D1CCA            MEDIASUBTYPE_ARGB4444
+DEFINE_GUID( MEDIASUBTYPE_ARGB4444,
+             0x6e6415e6, 0x5c24, 0x425f, 0x93, 0xcd, 0x80, 0x10, 0x2b, 0x3d, 0x1c, 0xca );
+
+// 773c9ac0-3274-11d0-B724-00aa006c1A01            MEDIASUBTYPE_ARGB32
+DEFINE_GUID( MEDIASUBTYPE_ARGB32,
+             0x773c9ac0, 0x3274, 0x11d0, 0xb7, 0x24, 0x0, 0xaa, 0x0, 0x6c, 0x1a, 0x1 );
+
+
+// 2f8bb76d-b644-4550-acf3-d30caa65d5c5            MEDIASUBTYPE_A2R10G10B10
+DEFINE_GUID( MEDIASUBTYPE_A2R10G10B10,
+             0x2f8bb76d, 0xb644, 0x4550, 0xac, 0xf3, 0xd3, 0x0c, 0xaa, 0x65, 0xd5, 0xc5 );
+
+// 576f7893-bdf6-48c4-875f-ae7b81834567            MEDIASUBTYPE_A2B10G10R10
+DEFINE_GUID( MEDIASUBTYPE_A2B10G10R10,
+             0x576f7893, 0xbdf6, 0x48c4, 0x87, 0x5f, 0xae, 0x7b, 0x81, 0x83, 0x45, 0x67 );
+
+
+// 56555941-0000-0010-8000-00AA00389B71  'AYUV' == MEDIASUBTYPE_AYUV
+//
+// See the DX-VA header and documentation for a description of this format.
+//
+DEFINE_GUID( MEDIASUBTYPE_AYUV,
+             0x56555941, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 34344941-0000-0010-8000-00AA00389B71  'AI44' == MEDIASUBTYPE_AI44
+//
+// See the DX-VA header and documentation for a description of this format.
+//
+DEFINE_GUID( MEDIASUBTYPE_AI44,
+             0x34344941, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 34344149-0000-0010-8000-00AA00389B71  'IA44' == MEDIASUBTYPE_IA44
+//
+// See the DX-VA header and documentation for a description of this format.
+//
+DEFINE_GUID( MEDIASUBTYPE_IA44,
+             0x34344149, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+
+//
+// DirectX7 D3D Render Target media subtypes.
+//
+
+// 32335237-0000-0010-8000-00AA00389B71  '7R32' == MEDIASUBTYPE_RGB32_D3D_DX7_RT
+DEFINE_GUID( MEDIASUBTYPE_RGB32_D3D_DX7_RT,
+             0x32335237, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 36315237-0000-0010-8000-00AA00389B71  '7R16' == MEDIASUBTYPE_RGB16_D3D_DX7_RT
+DEFINE_GUID( MEDIASUBTYPE_RGB16_D3D_DX7_RT,
+             0x36315237, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 38384137-0000-0010-8000-00AA00389B71  '7A88' == MEDIASUBTYPE_ARGB32_D3D_DX7_RT
+DEFINE_GUID( MEDIASUBTYPE_ARGB32_D3D_DX7_RT,
+             0x38384137, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 34344137-0000-0010-8000-00AA00389B71  '7A44' == MEDIASUBTYPE_ARGB4444_D3D_DX7_RT
+DEFINE_GUID( MEDIASUBTYPE_ARGB4444_D3D_DX7_RT,
+             0x34344137, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 35314137-0000-0010-8000-00AA00389B71  '7A15' == MEDIASUBTYPE_ARGB1555_D3D_DX7_RT
+DEFINE_GUID( MEDIASUBTYPE_ARGB1555_D3D_DX7_RT,
+             0x35314137, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+
+//
+// DirectX9 D3D Render Target media subtypes.
+//
+
+// 32335239-0000-0010-8000-00AA00389B71  '9R32' == MEDIASUBTYPE_RGB32_D3D_DX9_RT
+DEFINE_GUID( MEDIASUBTYPE_RGB32_D3D_DX9_RT,
+             0x32335239, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 36315239-0000-0010-8000-00AA00389B71  '9R16' == MEDIASUBTYPE_RGB16_D3D_DX9_RT
+DEFINE_GUID( MEDIASUBTYPE_RGB16_D3D_DX9_RT,
+             0x36315239, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 38384139-0000-0010-8000-00AA00389B71  '9A88' == MEDIASUBTYPE_ARGB32_D3D_DX9_RT
+DEFINE_GUID( MEDIASUBTYPE_ARGB32_D3D_DX9_RT,
+             0x38384139, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 34344139-0000-0010-8000-00AA00389B71  '9A44' == MEDIASUBTYPE_ARGB4444_D3D_DX9_RT
+DEFINE_GUID( MEDIASUBTYPE_ARGB4444_D3D_DX9_RT,
+             0x34344139, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 35314139-0000-0010-8000-00AA00389B71  '9A15' == MEDIASUBTYPE_ARGB1555_D3D_DX9_RT
+DEFINE_GUID( MEDIASUBTYPE_ARGB1555_D3D_DX9_RT,
+             0x35314139, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 32315659-0000-0010-8000-00AA00389B71  'YV12' ==  MEDIASUBTYPE_YV12
+DEFINE_GUID( MEDIASUBTYPE_YV12,
+             0x32315659, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 3231564E-0000-0010-8000-00AA00389B71  'NV12' ==  MEDIASUBTYPE_NV12
+DEFINE_GUID( MEDIASUBTYPE_NV12,
+             0x3231564E, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 3131564E-0000-0010-8000-00AA00389B71  'NV11' ==  MEDIASUBTYPE_NV11
+#ifndef MEDIASUBTYPE_NV11_DEFINED
+#define MEDIASUBTYPE_NV11_DEFINED
+DEFINE_GUID( MEDIASUBTYPE_NV11,
+             0x3131564E, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+#endif
+
+// 38303250-0000-0010-8000-00AA00389B71  'P208' ==  MEDIASUBTYPE_P208
+DEFINE_GUID( MEDIASUBTYPE_P208,
+             '802P', 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 38303250-0000-0010-8000-00AA00389B71  'P210' ==  MEDIASUBTYPE_P210
+DEFINE_GUID( MEDIASUBTYPE_P210,
+             '012P', 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 38303250-0000-0010-8000-00AA00389B71  'P216' ==  MEDIASUBTYPE_P216
+DEFINE_GUID( MEDIASUBTYPE_P216,
+             '612P', 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 38303250-0000-0010-8000-00AA00389B71  'P010' ==  MEDIASUBTYPE_P010
+DEFINE_GUID( MEDIASUBTYPE_P010,
+             '010P', 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 38303250-0000-0010-8000-00AA00389B71  'P016' ==  MEDIASUBTYPE_P016
+DEFINE_GUID( MEDIASUBTYPE_P016,
+             '610P', 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 38303250-0000-0010-8000-00AA00389B71  'Y210' ==  MEDIASUBTYPE_Y210
+DEFINE_GUID( MEDIASUBTYPE_Y210,
+             '012Y', 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 38303250-0000-0010-8000-00AA00389B71  'Y216' ==  MEDIASUBTYPE_Y216
+DEFINE_GUID( MEDIASUBTYPE_Y216,
+             '612Y', 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 38303450-0000-0010-8000-00AA00389B71  'P408' ==  MEDIASUBTYPE_P408
+DEFINE_GUID( MEDIASUBTYPE_P408,
+             '804P', 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 3432564E-0000-0010-8000-00AA00389B71  'NV24' ==  MEDIASUBTYPE_NV24
+DEFINE_GUID( MEDIASUBTYPE_NV24,
+             0x3432564E, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 4F303234-0000-0010-8000-00AA00389B71  '420O' ==  MEDIASUBTYPE_420O
+DEFINE_GUID( MEDIASUBTYPE_420O,
+             0x4F303234, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 31434D49-0000-0010-8000-00AA00389B71  'IMC1' ==  MEDIASUBTYPE_IMC1
+DEFINE_GUID( MEDIASUBTYPE_IMC1,
+             0x31434D49, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 32434d49-0000-0010-8000-00AA00389B71  'IMC2' ==  MEDIASUBTYPE_IMC2
+DEFINE_GUID( MEDIASUBTYPE_IMC2,
+             0x32434D49, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 33434d49-0000-0010-8000-00AA00389B71  'IMC3' ==  MEDIASUBTYPE_IMC3
+DEFINE_GUID( MEDIASUBTYPE_IMC3,
+             0x33434D49, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 34434d49-0000-0010-8000-00AA00389B71  'IMC4' ==  MEDIASUBTYPE_IMC4
+DEFINE_GUID( MEDIASUBTYPE_IMC4,
+             0x34434D49, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 30343353-0000-0010-8000-00AA00389B71  'S340' ==  MEDIASUBTYPE_S340
+DEFINE_GUID( MEDIASUBTYPE_S340,
+             0x30343353, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 32343353-0000-0010-8000-00AA00389B71  'S342' ==  MEDIASUBTYPE_S342
+DEFINE_GUID( MEDIASUBTYPE_S342,
+             0x32343353, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+
+// e436eb7f-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_Overlay
+DEFINE_GUID( MEDIASUBTYPE_Overlay,
+             0xe436eb7f, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436eb80-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_MPEGPacket
+DEFINE_GUID( MEDIASUBTYPE_MPEG1Packet,
+             0xe436eb80, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436eb81-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_MPEG1Payload
+DEFINE_GUID( MEDIASUBTYPE_MPEG1Payload,
+             0xe436eb81, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// 00000050-0000-0010-8000-00AA00389B71         MEDIASUBTYPE_MPEG1AudioPayload
+DEFINE_GUID( MEDIASUBTYPE_MPEG1AudioPayload,
+             0x00000050, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+
+// e436eb82-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_MPEG1SystemStream
+DEFINE_GUID( MEDIATYPE_MPEG1SystemStream,
+             0xe436eb82, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// the next consecutive number is assigned to MEDIATYPE_Stream and appears higher up
+// e436eb84-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_MPEG1System
+DEFINE_GUID( MEDIASUBTYPE_MPEG1System,
+             0xe436eb84, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436eb85-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_MPEG1VideoCD
+DEFINE_GUID( MEDIASUBTYPE_MPEG1VideoCD,
+             0xe436eb85, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436eb86-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_MPEG1Video
+DEFINE_GUID( MEDIASUBTYPE_MPEG1Video,
+             0xe436eb86, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436eb87-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_MPEG1Audio
+DEFINE_GUID( MEDIASUBTYPE_MPEG1Audio,
+             0xe436eb87, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436eb88-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_Avi
+DEFINE_GUID( MEDIASUBTYPE_Avi,
+             0xe436eb88, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// {3DB80F90-9412-11d1-ADED-0000F8754B99}          MEDIASUBTYPE_Asf
+DEFINE_GUID( MEDIASUBTYPE_Asf,
+             0x3db80f90, 0x9412, 0x11d1, 0xad, 0xed, 0x0, 0x0, 0xf8, 0x75, 0x4b, 0x99 );
+
+// e436eb89-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_QTMovie
+DEFINE_GUID( MEDIASUBTYPE_QTMovie,
+             0xe436eb89, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// 617a7072-0000-0010-8000-00AA00389B71         MEDIASUBTYPE_Rpza
+DEFINE_GUID( MEDIASUBTYPE_QTRpza,
+             0x617a7072, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 20636d73-0000-0010-8000-00AA00389B71         MEDIASUBTYPE_Smc
+DEFINE_GUID( MEDIASUBTYPE_QTSmc,
+             0x20636d73, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 20656c72-0000-0010-8000-00AA00389B71        MEDIASUBTYPE_Rle
+DEFINE_GUID( MEDIASUBTYPE_QTRle,
+             0x20656c72, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 6765706a-0000-0010-8000-00AA00389B71        MEDIASUBTYPE_Jpeg
+DEFINE_GUID( MEDIASUBTYPE_QTJpeg,
+             0x6765706a, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// e436eb8a-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_PCMAudio_Obsolete
+DEFINE_GUID( MEDIASUBTYPE_PCMAudio_Obsolete,
+             0xe436eb8a, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// 00000001-0000-0010-8000-00AA00389B71            MEDIASUBTYPE_PCM
+DEFINE_GUID( MEDIASUBTYPE_PCM,
+             0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+
+// e436eb8b-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_WAVE
+DEFINE_GUID( MEDIASUBTYPE_WAVE,
+             0xe436eb8b, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436eb8c-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_AU
+DEFINE_GUID( MEDIASUBTYPE_AU,
+             0xe436eb8c, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436eb8d-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_AIFF
+DEFINE_GUID( MEDIASUBTYPE_AIFF,
+             0xe436eb8d, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// 64(d)73(s)76(v)64(d)-0000-0010-8000-00AA00389B71  'dvsd' == MEDIASUBTYPE_dvsd
+DEFINE_GUID( MEDIASUBTYPE_dvsd,
+             0x64737664, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 64(d)68(h)76(v)64(d)-0000-0010-8000-00AA00389B71  'dvhd' == MEDIASUBTYPE_dvhd
+DEFINE_GUID( MEDIASUBTYPE_dvhd,
+             0x64687664, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 6c(l)73(s)76(v)64(d)-0000-0010-8000-00AA00389B71  'dvsl' == MEDIASUBTYPE_dvsl
+DEFINE_GUID( MEDIASUBTYPE_dvsl,
+             0x6c737664, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 35(5)32(2)76(v)64(d)-0000-0010-8000-00AA00389B71  'dv25' ==  MEDIASUBTYPE_dv25
+DEFINE_GUID( MEDIASUBTYPE_dv25,
+             0x35327664, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 30(0)35(5)76(v)64(d)-0000-0010-8000-00AA00389B71  'dv50' ==  MEDIASUBTYPE_dv50
+DEFINE_GUID( MEDIASUBTYPE_dv50,
+             0x30357664, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 31(1)68(h)76(v)64(d)-0000-0010-8000-00AA00389B71  'dvh1' ==  MEDIASUBTYPE_dvh1
+DEFINE_GUID( MEDIASUBTYPE_dvh1,
+             0x31687664, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// 6E8D4A22-310C-11d0-B79A-00AA003767A7         MEDIASUBTYPE_Line21_BytePair
+DEFINE_GUID( MEDIASUBTYPE_Line21_BytePair,
+             0x6e8d4a22, 0x310c, 0x11d0, 0xb7, 0x9a, 0x0, 0xaa, 0x0, 0x37, 0x67, 0xa7 );
+
+// 6E8D4A23-310C-11d0-B79A-00AA003767A7         MEDIASUBTYPE_Line21_GOPPacket
+DEFINE_GUID( MEDIASUBTYPE_Line21_GOPPacket,
+             0x6e8d4a23, 0x310c, 0x11d0, 0xb7, 0x9a, 0x0, 0xaa, 0x0, 0x37, 0x67, 0xa7 );
+
+// 6E8D4A24-310C-11d0-B79A-00AA003767A7         MEDIASUBTYPE_Line21_VBIRawData
+DEFINE_GUID( MEDIASUBTYPE_Line21_VBIRawData,
+             0x6e8d4a24, 0x310c, 0x11d0, 0xb7, 0x9a, 0x0, 0xaa, 0x0, 0x37, 0x67, 0xa7 );
+
+//0AF414BC-4ED2-445e-9839-8F095568AB3C          MEDIASUBTYPE_708_608Data
+DEFINE_GUID( MEDIASUBTYPE_708_608Data,
+             0xaf414bc, 0x4ed2, 0x445e, 0x98, 0x39, 0x8f, 0x9, 0x55, 0x68, 0xab, 0x3c );
+
+// F52ADDAA-36F0-43F5-95EA-6D866484262A         MEDIASUBTYPE_DtvCcData
+DEFINE_GUID( MEDIASUBTYPE_DtvCcData,
+             0xF52ADDAA, 0x36F0, 0x43F5, 0x95, 0xEA, 0x6D, 0x86, 0x64, 0x84, 0x26, 0x2A );
+
+// 7EA626DB-54DA-437b-BE9F-F73073ADFA3C         MEDIASUBTYPE_CC_CONTAINER
+DEFINE_GUID( MEDIASUBTYPE_CC_CONTAINER,
+             0x7ea626db, 0x54da, 0x437b, 0xbe, 0x9f, 0xf7, 0x30, 0x73, 0xad, 0xfa, 0x3c );
+
+// F72A76E3-EB0A-11D0-ACE4-0000C0CC16BA         MEDIASUBTYPE_TELETEXT
+DEFINE_GUID( MEDIASUBTYPE_TELETEXT,
+             0xf72a76e3, 0xeb0a, 0x11d0, 0xac, 0xe4, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+// 663DA43C-03E8-4e9a-9CD5-BF11ED0DEF76         MEDIASUBTYPE_VBI
+DEFINE_GUID( MEDIASUBTYPE_VBI,
+             0x663da43c, 0x3e8, 0x4e9a, 0x9c, 0xd5, 0xbf, 0x11, 0xed, 0xd, 0xef, 0x76 );
+
+// 2791D576-8E7A-466F-9E90-5D3F3083738B         MEDIASUBTYPE_WSS
+DEFINE_GUID( MEDIASUBTYPE_WSS,
+             0x2791D576, 0x8E7A, 0x466F, 0x9E, 0x90, 0x5D, 0x3F, 0x30, 0x83, 0x73, 0x8B );
+
+// 01CA73E3-DCE6-4575-AFE1-2BF1C902CAF3         MEDIASUBTYPE_XDS
+DEFINE_GUID( MEDIASUBTYPE_XDS,
+             0x1ca73e3, 0xdce6, 0x4575, 0xaf, 0xe1, 0x2b, 0xf1, 0xc9, 0x2, 0xca, 0xf3 );
+
+// A1B3F620-9792-4d8d-81A4-86AF25772090         MEDIASUBTYPE_VPS
+DEFINE_GUID( MEDIASUBTYPE_VPS,
+             0xa1b3f620, 0x9792, 0x4d8d, 0x81, 0xa4, 0x86, 0xaf, 0x25, 0x77, 0x20, 0x90 );
+
+// derived from WAVE_FORMAT_DRM
+// 00000009-0000-0010-8000-00aa00389b71
+DEFINE_GUID( MEDIASUBTYPE_DRM_Audio,
+             0x00000009, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// derived from WAVE_FORMAT_IEEE_FLOAT
+// 00000003-0000-0010-8000-00aa00389b71
+DEFINE_GUID( MEDIASUBTYPE_IEEE_FLOAT,
+             0x00000003, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// derived from WAVE_FORMAT_DOLBY_AC3_SPDIF
+// 00000092-0000-0010-8000-00aa00389b71
+DEFINE_GUID( MEDIASUBTYPE_DOLBY_AC3_SPDIF,
+             0x00000092, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// derived from WAVE_FORMAT_RAW_SPORT
+// 00000240-0000-0010-8000-00aa00389b71
+DEFINE_GUID( MEDIASUBTYPE_RAW_SPORT,
+             0x00000240, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+// derived from wave format tag 0x241, call it SPDIF_TAG_241h for now
+// 00000241-0000-0010-8000-00aa00389b71
+DEFINE_GUID( MEDIASUBTYPE_SPDIF_TAG_241h,
+             0x00000241, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+
+
+
+// DirectShow DSS definitions
+
+// A0AF4F81-E163-11d0-BAD9-00609744111A
+DEFINE_GUID( MEDIASUBTYPE_DssVideo,
+             0xa0af4f81, 0xe163, 0x11d0, 0xba, 0xd9, 0x0, 0x60, 0x97, 0x44, 0x11, 0x1a );
+
+// A0AF4F82-E163-11d0-BAD9-00609744111A
+DEFINE_GUID( MEDIASUBTYPE_DssAudio,
+             0xa0af4f82, 0xe163, 0x11d0, 0xba, 0xd9, 0x0, 0x60, 0x97, 0x44, 0x11, 0x1a );
+
+// 5A9B6A40-1A22-11D1-BAD9-00609744111A
+DEFINE_GUID( MEDIASUBTYPE_VPVideo,
+             0x5a9b6a40, 0x1a22, 0x11d1, 0xba, 0xd9, 0x0, 0x60, 0x97, 0x44, 0x11, 0x1a );
+
+// 5A9B6A41-1A22-11D1-BAD9-00609744111A
+DEFINE_GUID( MEDIASUBTYPE_VPVBI,
+             0x5a9b6a41, 0x1a22, 0x11d1, 0xba, 0xd9, 0x0, 0x60, 0x97, 0x44, 0x11, 0x1a );
+
+// BF87B6E0-8C27-11d0-B3F0-00AA003761C5     Capture graph building
+DEFINE_GUID( CLSID_CaptureGraphBuilder,
+             0xBF87B6E0, 0x8C27, 0x11d0, 0xB3, 0xF0, 0x0, 0xAA, 0x00, 0x37, 0x61, 0xC5 );
+
+// BF87B6E1-8C27-11d0-B3F0-00AA003761C5     New Capture graph building
+DEFINE_GUID( CLSID_CaptureGraphBuilder2,
+             0xBF87B6E1, 0x8C27, 0x11d0, 0xB3, 0xF0, 0x0, 0xAA, 0x00, 0x37, 0x61, 0xC5 );
+
+// e436ebb0-524f-11ce-9f53-0020af0ba770            Prototype filtergraph
+DEFINE_GUID( CLSID_ProtoFilterGraph,
+             0xe436ebb0, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436ebb1-524f-11ce-9f53-0020af0ba770            Reference clock
+DEFINE_GUID( CLSID_SystemClock,
+             0xe436ebb1, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436ebb2-524f-11ce-9f53-0020af0ba770           Filter Mapper
+DEFINE_GUID( CLSID_FilterMapper,
+             0xe436ebb2, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436ebb3-524f-11ce-9f53-0020af0ba770           Filter Graph
+DEFINE_GUID( CLSID_FilterGraph,
+             0xe436ebb3, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// e436ebb8-524f-11ce-9f53-0020af0ba770           Filter Graph no thread
+DEFINE_GUID( CLSID_FilterGraphNoThread,
+             0xe436ebb8, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// a3ecbc41-581a-4476-b693-a63340462d8b
+DEFINE_GUID( CLSID_FilterGraphPrivateThread,
+             0xa3ecbc41, 0x581a, 0x4476, 0xb6, 0x93, 0xa6, 0x33, 0x40, 0x46, 0x2d, 0x8b );
+
+// e4bbd160-4269-11ce-838d-00aa0055595a           MPEG System stream
+DEFINE_GUID( CLSID_MPEG1Doc,
+             0xe4bbd160, 0x4269, 0x11ce, 0x83, 0x8d, 0x0, 0xaa, 0x0, 0x55, 0x59, 0x5a );
+
+// 701722e0-8ae3-11ce-a85c-00aa002feab5           MPEG file reader
+DEFINE_GUID( CLSID_FileSource,
+             0x701722e0, 0x8ae3, 0x11ce, 0xa8, 0x5c, 0x00, 0xaa, 0x00, 0x2f, 0xea, 0xb5 );
+
+// 26C25940-4CA9-11ce-A828-00AA002FEAB5           Takes MPEG1 packets as input
+DEFINE_GUID( CLSID_MPEG1PacketPlayer,
+             0x26c25940, 0x4ca9, 0x11ce, 0xa8, 0x28, 0x0, 0xaa, 0x0, 0x2f, 0xea, 0xb5 );
+
+// 336475d0-942a-11ce-a870-00aa002feab5           MPEG splitter
+DEFINE_GUID( CLSID_MPEG1Splitter,
+             0x336475d0, 0x942a, 0x11ce, 0xa8, 0x70, 0x00, 0xaa, 0x00, 0x2f, 0xea, 0xb5 );
+
+// feb50740-7bef-11ce-9bd9-0000e202599c           MPEG video decoder
+DEFINE_GUID( CLSID_CMpegVideoCodec,
+             0xfeb50740, 0x7bef, 0x11ce, 0x9b, 0xd9, 0x0, 0x0, 0xe2, 0x2, 0x59, 0x9c );
+
+// 4a2286e0-7bef-11ce-9bd9-0000e202599c           MPEG audio decoder
+DEFINE_GUID( CLSID_CMpegAudioCodec,
+             0x4a2286e0, 0x7bef, 0x11ce, 0x9b, 0xd9, 0x0, 0x0, 0xe2, 0x2, 0x59, 0x9c );
+
+// e30629d3-27e5-11ce-875d-00608cb78066           Text renderer
+DEFINE_GUID( CLSID_TextRender,
+             0xe30629d3, 0x27e5, 0x11ce, 0x87, 0x5d, 0x0, 0x60, 0x8c, 0xb7, 0x80, 0x66 );
+
+
+
+// {F8388A40-D5BB-11d0-BE5A-0080C706568E}
+DEFINE_GUID( CLSID_InfTee,
+             0xf8388a40, 0xd5bb, 0x11d0, 0xbe, 0x5a, 0x0, 0x80, 0xc7, 0x6, 0x56, 0x8e );
+
+// 1b544c20-fd0b-11ce-8c63-00aa0044b51e           Avi Stream Splitter
+DEFINE_GUID( CLSID_AviSplitter,
+             0x1b544c20, 0xfd0b, 0x11ce, 0x8c, 0x63, 0x0, 0xaa, 0x00, 0x44, 0xb5, 0x1e );
+
+// 1b544c21-fd0b-11ce-8c63-00aa0044b51e           Avi File Reader
+DEFINE_GUID( CLSID_AviReader,
+             0x1b544c21, 0xfd0b, 0x11ce, 0x8c, 0x63, 0x0, 0xaa, 0x00, 0x44, 0xb5, 0x1e );
+
+// 1b544c22-fd0b-11ce-8c63-00aa0044b51e           Vfw 2.0 Capture Driver
+DEFINE_GUID( CLSID_VfwCapture,
+             0x1b544c22, 0xfd0b, 0x11ce, 0x8c, 0x63, 0x0, 0xaa, 0x00, 0x44, 0xb5, 0x1e );
+
+DEFINE_GUID( CLSID_CaptureProperties,
+             0x1B544c22, 0xFD0B, 0x11ce, 0x8C, 0x63, 0x00, 0xAA, 0x00, 0x44, 0xB5, 0x1F );
+
+//e436ebb4-524f-11ce-9f53-0020af0ba770            Control Distributor
+DEFINE_GUID( CLSID_FGControl,
+             0xe436ebb4, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// 44584800-F8EE-11ce-B2D4-00DD01101B85           .MOV reader (old)
+DEFINE_GUID( CLSID_MOVReader,
+             0x44584800, 0xf8ee, 0x11ce, 0xb2, 0xd4, 0x00, 0xdd, 0x1, 0x10, 0x1b, 0x85 );
+
+// D51BD5A0-7548-11cf-A520-0080C77EF58A           QT Splitter
+DEFINE_GUID( CLSID_QuickTimeParser,
+             0xd51bd5a0, 0x7548, 0x11cf, 0xa5, 0x20, 0x0, 0x80, 0xc7, 0x7e, 0xf5, 0x8a );
+
+// FDFE9681-74A3-11d0-AFA7-00AA00B67A42           QT Decoder
+DEFINE_GUID( CLSID_QTDec,
+             0xfdfe9681, 0x74a3, 0x11d0, 0xaf, 0xa7, 0x0, 0xaa, 0x0, 0xb6, 0x7a, 0x42 );
+
+// D3588AB0-0781-11ce-B03A-0020AF0BA770           AVIFile-based reader
+DEFINE_GUID( CLSID_AVIDoc,
+             0xd3588ab0, 0x0781, 0x11ce, 0xb0, 0x3a, 0x00, 0x20, 0xaf, 0xb, 0xa7, 0x70 );
+
+// 70e102b0-5556-11ce-97c0-00aa0055595a           Video renderer
+DEFINE_GUID( CLSID_VideoRenderer,
+             0x70e102b0, 0x5556, 0x11ce, 0x97, 0xc0, 0x00, 0xaa, 0x00, 0x55, 0x59, 0x5a );
+
+// 1643e180-90f5-11ce-97d5-00aa0055595a           Colour space convertor
+DEFINE_GUID( CLSID_Colour,
+             0x1643e180, 0x90f5, 0x11ce, 0x97, 0xd5, 0x00, 0xaa, 0x00, 0x55, 0x59, 0x5a );
+
+// 1da08500-9edc-11cf-bc10-00aa00ac74f6           VGA 16 color ditherer
+DEFINE_GUID( CLSID_Dither,
+             0x1da08500, 0x9edc, 0x11cf, 0xbc, 0x10, 0x00, 0xaa, 0x00, 0xac, 0x74, 0xf6 );
+
+// 07167665-5011-11cf-BF33-00AA0055595A           Modex video renderer
+DEFINE_GUID( CLSID_ModexRenderer,
+             0x7167665, 0x5011, 0x11cf, 0xbf, 0x33, 0x0, 0xaa, 0x0, 0x55, 0x59, 0x5a );
+
+// e30629d1-27e5-11ce-875d-00608cb78066           Waveout audio renderer
+DEFINE_GUID( CLSID_AudioRender,
+             0xe30629d1, 0x27e5, 0x11ce, 0x87, 0x5d, 0x0, 0x60, 0x8c, 0xb7, 0x80, 0x66 );
+
+// 05589faf-c356-11ce-bf01-00aa0055595a           Audio Renderer Property Page
+DEFINE_GUID( CLSID_AudioProperties,
+             0x05589faf, 0xc356, 0x11ce, 0xbf, 0x01, 0x0, 0xaa, 0x0, 0x55, 0x59, 0x5a );
+
+// 79376820-07D0-11cf-A24D-0020AFD79767           DSound audio renderer
+DEFINE_GUID( CLSID_DSoundRender,
+             0x79376820, 0x07D0, 0x11CF, 0xA2, 0x4D, 0x0, 0x20, 0xAF, 0xD7, 0x97, 0x67 );
+
+// e30629d2-27e5-11ce-875d-00608cb78066           Wavein audio recorder
+DEFINE_GUID( CLSID_AudioRecord,
+             0xe30629d2, 0x27e5, 0x11ce, 0x87, 0x5d, 0x0, 0x60, 0x8c, 0xb7, 0x80, 0x66 );
+
+// {2CA8CA52-3C3F-11d2-B73D-00C04FB6BD3D}         IAMAudioInputMixer property page
+DEFINE_GUID( CLSID_AudioInputMixerProperties,
+             0x2ca8ca52, 0x3c3f, 0x11d2, 0xb7, 0x3d, 0x0, 0xc0, 0x4f, 0xb6, 0xbd, 0x3d );
+
+// {CF49D4E0-1115-11ce-B03A-0020AF0BA770}         AVI Decoder
+DEFINE_GUID( CLSID_AVIDec,
+             0xcf49d4e0, 0x1115, 0x11ce, 0xb0, 0x3a, 0x0, 0x20, 0xaf, 0xb, 0xa7, 0x70 );
+
+// {A888DF60-1E90-11cf-AC98-00AA004C0FA9}         AVI ICDraw* wrapper
+DEFINE_GUID( CLSID_AVIDraw,
+             0xa888df60, 0x1e90, 0x11cf, 0xac, 0x98, 0x0, 0xaa, 0x0, 0x4c, 0xf, 0xa9 );
+
+// 6a08cf80-0e18-11cf-a24d-0020afd79767       ACM Wrapper
+DEFINE_GUID( CLSID_ACMWrapper,
+             0x6a08cf80, 0x0e18, 0x11cf, 0xa2, 0x4d, 0x0, 0x20, 0xaf, 0xd7, 0x97, 0x67 );
+
+// {e436ebb5-524f-11ce-9f53-0020af0ba770}    Async File Reader
+DEFINE_GUID( CLSID_AsyncReader,
+             0xe436ebb5, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// {e436ebb6-524f-11ce-9f53-0020af0ba770}    Async URL Reader
+DEFINE_GUID( CLSID_URLReader,
+             0xe436ebb6, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// {e436ebb7-524f-11ce-9f53-0020af0ba770}    IPersistMoniker PID
+DEFINE_GUID( CLSID_PersistMonikerPID,
+             0xe436ebb7, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+
+// {D76E2820-1563-11cf-AC98-00AA004C0FA9}
+DEFINE_GUID( CLSID_AVICo,
+             0xd76e2820, 0x1563, 0x11cf, 0xac, 0x98, 0x0, 0xaa, 0x0, 0x4c, 0xf, 0xa9 );
+
+// {8596E5F0-0DA5-11d0-BD21-00A0C911CE86}
+DEFINE_GUID( CLSID_FileWriter,
+             0x8596e5f0, 0xda5, 0x11d0, 0xbd, 0x21, 0x0, 0xa0, 0xc9, 0x11, 0xce, 0x86 );
+
+// {E2510970-F137-11CE-8B67-00AA00A3F1A6}     AVI mux filter
+DEFINE_GUID( CLSID_AviDest,
+             0xe2510970, 0xf137, 0x11ce, 0x8b, 0x67, 0x0, 0xaa, 0x0, 0xa3, 0xf1, 0xa6 );
+
+// {C647B5C0-157C-11d0-BD23-00A0C911CE86}
+DEFINE_GUID( CLSID_AviMuxProptyPage,
+             0xc647b5c0, 0x157c, 0x11d0, 0xbd, 0x23, 0x0, 0xa0, 0xc9, 0x11, 0xce, 0x86 );
+
+// {0A9AE910-85C0-11d0-BD42-00A0C911CE86}
+DEFINE_GUID( CLSID_AviMuxProptyPage1,
+             0xa9ae910, 0x85c0, 0x11d0, 0xbd, 0x42, 0x0, 0xa0, 0xc9, 0x11, 0xce, 0x86 );
+
+// {07b65360-c445-11ce-afde-00aa006c14f4}
+DEFINE_GUID( CLSID_AVIMIDIRender,
+             0x07b65360, 0xc445, 0x11ce, 0xaf, 0xde, 0x00, 0xaa, 0x00, 0x6c, 0x14, 0xf4 );
+
+// {187463A0-5BB7-11d3-ACBE-0080C75E246E}    WMSDK-based ASF reader
+DEFINE_GUID( CLSID_WMAsfReader,
+             0x187463a0, 0x5bb7, 0x11d3, 0xac, 0xbe, 0x0, 0x80, 0xc7, 0x5e, 0x24, 0x6e );
+
+// {7c23220e-55bb-11d3-8b16-00c04fb6bd3d}    WMSDK-based ASF writer
+DEFINE_GUID( CLSID_WMAsfWriter,
+             0x7c23220e, 0x55bb, 0x11d3, 0x8b, 0x16, 0x0, 0xc0, 0x4f, 0xb6, 0xbd, 0x3d );
+
+//  {afb6c280-2c41-11d3-8a60-0000f81e0e4a}
+DEFINE_GUID( CLSID_MPEG2Demultiplexer,
+             0xafb6c280, 0x2c41, 0x11d3, 0x8a, 0x60, 0x00, 0x00, 0xf8, 0x1e, 0x0e, 0x4a );
+
+// {687D3367-3644-467a-ADFE-6CD7A85C4A2C}
+DEFINE_GUID( CLSID_MPEG2Demultiplexer_NoClock,
+             0x687d3367, 0x3644, 0x467a, 0xad, 0xfe, 0x6c, 0xd7, 0xa8, 0x5c, 0x4a, 0x2c );
+
+// {3ae86b20-7be8-11d1-abe6-00a0c905f375}
+DEFINE_GUID( CLSID_MMSPLITTER,
+             0x3ae86b20, 0x7be8, 0x11d1, 0xab, 0xe6, 0x00, 0xa0, 0xc9, 0x05, 0xf3, 0x75 );
+
+// {2DB47AE5-CF39-43c2-B4D6-0CD8D90946F4}
+DEFINE_GUID( CLSID_StreamBufferSink,
+             0x2db47ae5, 0xcf39, 0x43c2, 0xb4, 0xd6, 0xc, 0xd8, 0xd9, 0x9, 0x46, 0xf4 );
+
+// {E2448508-95DA-4205-9A27-7EC81E723B1A}
+DEFINE_GUID( CLSID_SBE2Sink,
+             0xe2448508, 0x95da, 0x4205, 0x9a, 0x27, 0x7e, 0xc8, 0x1e, 0x72, 0x3b, 0x1a );
+
+// {C9F5FE02-F851-4eb5-99EE-AD602AF1E619}
+DEFINE_GUID( CLSID_StreamBufferSource,
+             0xc9f5fe02, 0xf851, 0x4eb5, 0x99, 0xee, 0xad, 0x60, 0x2a, 0xf1, 0xe6, 0x19 );
+
+// {FA8A68B2-C864-4ba2-AD53-D3876A87494B}
+DEFINE_GUID( CLSID_StreamBufferConfig,
+             0xfa8a68b2, 0xc864, 0x4ba2, 0xad, 0x53, 0xd3, 0x87, 0x6a, 0x87, 0x49, 0x4b );
+
+// {E37A73F8-FB01-43dc-914E-AAEE76095AB9}
+DEFINE_GUID( CLSID_StreamBufferPropertyHandler,
+             0xe37a73f8, 0xfb01, 0x43dc, 0x91, 0x4e, 0xaa, 0xee, 0x76, 0x9, 0x5a, 0xb9 );
+
+// {713790EE-5EE1-45ba-8070-A1337D2762FA}
+DEFINE_GUID( CLSID_StreamBufferThumbnailHandler,
+             0x713790ee, 0x5ee1, 0x45ba, 0x80, 0x70, 0xa1, 0x33, 0x7d, 0x27, 0x62, 0xfa );
+
+// {6CFAD761-735D-4aa5-8AFC-AF91A7D61EBA}
+DEFINE_GUID( CLSID_Mpeg2VideoStreamAnalyzer,
+             0x6cfad761, 0x735d, 0x4aa5, 0x8a, 0xfc, 0xaf, 0x91, 0xa7, 0xd6, 0x1e, 0xba );
+
+// {CCAA63AC-1057-4778-AE92-1206AB9ACEE6}
+DEFINE_GUID( CLSID_StreamBufferRecordingAttributes,
+             0xccaa63ac, 0x1057, 0x4778, 0xae, 0x92, 0x12, 0x6, 0xab, 0x9a, 0xce, 0xe6 );
+
+// {D682C4BA-A90A-42fe-B9E1-03109849C423}
+DEFINE_GUID( CLSID_StreamBufferComposeRecording,
+             0xd682c4ba, 0xa90a, 0x42fe, 0xb9, 0xe1, 0x3, 0x10, 0x98, 0x49, 0xc4, 0x23 );
+
+// {93A094D7-51E8-485b-904A-8D6B97DC6B39}
+DEFINE_GUID( CLSID_SBE2File,
+             0x93a094d7, 0x51e8, 0x485b, 0x90, 0x4a, 0x8d, 0x6b, 0x97, 0xdc, 0x6b, 0x39 );
+
+// {B1B77C00-C3E4-11cf-AF79-00AA00B67A42}               DV video decoder
+DEFINE_GUID( CLSID_DVVideoCodec,
+             0xb1b77c00, 0xc3e4, 0x11cf, 0xaf, 0x79, 0x0, 0xaa, 0x0, 0xb6, 0x7a, 0x42 );
+
+// {13AA3650-BB6F-11d0-AFB9-00AA00B67A42}               DV video encoder
+DEFINE_GUID( CLSID_DVVideoEnc,
+             0x13aa3650, 0xbb6f, 0x11d0, 0xaf, 0xb9, 0x0, 0xaa, 0x0, 0xb6, 0x7a, 0x42 );
+
+// {4EB31670-9FC6-11cf-AF6E-00AA00B67A42}               DV splitter
+DEFINE_GUID( CLSID_DVSplitter,
+             0x4eb31670, 0x9fc6, 0x11cf, 0xaf, 0x6e, 0x0, 0xaa, 0x0, 0xb6, 0x7a, 0x42 );
+
+// {129D7E40-C10D-11d0-AFB9-00AA00B67A42}               DV muxer
+DEFINE_GUID( CLSID_DVMux,
+             0x129d7e40, 0xc10d, 0x11d0, 0xaf, 0xb9, 0x0, 0xaa, 0x0, 0xb6, 0x7a, 0x42 );
+
+// {060AF76C-68DD-11d0-8FC1-00C04FD9189D}
+DEFINE_GUID( CLSID_SeekingPassThru,
+             0x60af76c, 0x68dd, 0x11d0, 0x8f, 0xc1, 0x0, 0xc0, 0x4f, 0xd9, 0x18, 0x9d );
+
+// 6E8D4A20-310C-11d0-B79A-00AA003767A7                 Line21 (CC) Decoder
+DEFINE_GUID( CLSID_Line21Decoder,
+             0x6e8d4a20, 0x310c, 0x11d0, 0xb7, 0x9a, 0x0, 0xaa, 0x0, 0x37, 0x67, 0xa7 );
+
+// E4206432-01A1-4BEE-B3E1-3702C8EDC574                 Line21 (CC) Decoder v2
+DEFINE_GUID( CLSID_Line21Decoder2,
+             0xe4206432, 0x01a1, 0x4bee, 0xb3, 0xe1, 0x37, 0x02, 0xc8, 0xed, 0xc5, 0x74 );
+
+DEFINE_GUID( CLSID_CCAFilter,
+             0x3d07a539, 0x35ca, 0x447c, 0x9b, 0x5, 0x8d, 0x85, 0xce, 0x92, 0x4f, 0x9e );
+
+// {CD8743A1-3736-11d0-9E69-00C04FD7C15B}
+DEFINE_GUID( CLSID_OverlayMixer,
+             0xcd8743a1, 0x3736, 0x11d0, 0x9e, 0x69, 0x0, 0xc0, 0x4f, 0xd7, 0xc1, 0x5b );
+
+// {814B9800-1C88-11d1-BAD9-00609744111A}
+DEFINE_GUID( CLSID_VBISurfaces,
+             0x814b9800, 0x1c88, 0x11d1, 0xba, 0xd9, 0x0, 0x60, 0x97, 0x44, 0x11, 0x1a );
+
+// {70BC06E0-5666-11d3-A184-00105AEF9F33}               WST Teletext Decoder
+DEFINE_GUID( CLSID_WSTDecoder,
+             0x70bc06e0, 0x5666, 0x11d3, 0xa1, 0x84, 0x0, 0x10, 0x5a, 0xef, 0x9f, 0x33 );
+
+// {301056D0-6DFF-11d2-9EEB-006008039E37}
+DEFINE_GUID( CLSID_MjpegDec,
+             0x301056d0, 0x6dff, 0x11d2, 0x9e, 0xeb, 0x0, 0x60, 0x8, 0x3, 0x9e, 0x37 );
+
+// {B80AB0A0-7416-11d2-9EEB-006008039E37}
+DEFINE_GUID( CLSID_MJPGEnc,
+             0xb80ab0a0, 0x7416, 0x11d2, 0x9e, 0xeb, 0x0, 0x60, 0x8, 0x3, 0x9e, 0x37 );
+
+
+
+// pnp objects and categories
+// 62BE5D10-60EB-11d0-BD3B-00A0C911CE86                 ICreateDevEnum
+DEFINE_GUID( CLSID_SystemDeviceEnum,
+             0x62BE5D10, 0x60EB, 0x11d0, 0xBD, 0x3B, 0x00, 0xA0, 0xC9, 0x11, 0xCE, 0x86 );
+
+// 4315D437-5B8C-11d0-BD3B-00A0C911CE86
+DEFINE_GUID( CLSID_CDeviceMoniker,
+             0x4315D437, 0x5B8C, 0x11d0, 0xBD, 0x3B, 0x00, 0xA0, 0xC9, 0x11, 0xCE, 0x86 );
+
+// 860BB310-5D01-11d0-BD3B-00A0C911CE86                 Video capture category
+DEFINE_GUID( CLSID_VideoInputDeviceCategory,
+             0x860BB310, 0x5D01, 0x11d0, 0xBD, 0x3B, 0x00, 0xA0, 0xC9, 0x11, 0xCE, 0x86 );
+DEFINE_GUID( CLSID_CVidCapClassManager,
+             0x860BB310, 0x5D01, 0x11d0, 0xBD, 0x3B, 0x00, 0xA0, 0xC9, 0x11, 0xCE, 0x86 );
+
+// 083863F1-70DE-11d0-BD40-00A0C911CE86                 Filter category
+DEFINE_GUID( CLSID_LegacyAmFilterCategory,
+             0x083863F1, 0x70DE, 0x11d0, 0xBD, 0x40, 0x00, 0xA0, 0xC9, 0x11, 0xCE, 0x86 );
+DEFINE_GUID( CLSID_CQzFilterClassManager,
+             0x083863F1, 0x70DE, 0x11d0, 0xBD, 0x40, 0x00, 0xA0, 0xC9, 0x11, 0xCE, 0x86 );
+
+// 33D9A760-90C8-11d0-BD43-00A0C911CE86
+DEFINE_GUID( CLSID_VideoCompressorCategory,
+             0x33d9a760, 0x90c8, 0x11d0, 0xbd, 0x43, 0x0, 0xa0, 0xc9, 0x11, 0xce, 0x86 );
+DEFINE_GUID( CLSID_CIcmCoClassManager,
+             0x33d9a760, 0x90c8, 0x11d0, 0xbd, 0x43, 0x0, 0xa0, 0xc9, 0x11, 0xce, 0x86 );
+
+// 33D9A761-90C8-11d0-BD43-00A0C911CE86
+DEFINE_GUID( CLSID_AudioCompressorCategory,
+             0x33d9a761, 0x90c8, 0x11d0, 0xbd, 0x43, 0x0, 0xa0, 0xc9, 0x11, 0xce, 0x86 );
+DEFINE_GUID( CLSID_CAcmCoClassManager,
+             0x33d9a761, 0x90c8, 0x11d0, 0xbd, 0x43, 0x0, 0xa0, 0xc9, 0x11, 0xce, 0x86 );
+
+// 33D9A762-90C8-11d0-BD43-00A0C911CE86                 Audio source cateogry
+DEFINE_GUID( CLSID_AudioInputDeviceCategory,
+             0x33d9a762, 0x90c8, 0x11d0, 0xbd, 0x43, 0x0, 0xa0, 0xc9, 0x11, 0xce, 0x86 );
+DEFINE_GUID( CLSID_CWaveinClassManager,
+             0x33d9a762, 0x90c8, 0x11d0, 0xbd, 0x43, 0x0, 0xa0, 0xc9, 0x11, 0xce, 0x86 );
+
+// E0F158E1-CB04-11d0-BD4E-00A0C911CE86                 Audio renderer category
+DEFINE_GUID( CLSID_AudioRendererCategory,
+             0xe0f158e1, 0xcb04, 0x11d0, 0xbd, 0x4e, 0x0, 0xa0, 0xc9, 0x11, 0xce, 0x86 );
+DEFINE_GUID( CLSID_CWaveOutClassManager,
+             0xe0f158e1, 0xcb04, 0x11d0, 0xbd, 0x4e, 0x0, 0xa0, 0xc9, 0x11, 0xce, 0x86 );
+
+// 4EFE2452-168A-11d1-BC76-00C04FB9453B                 Midi renderer category
+DEFINE_GUID( CLSID_MidiRendererCategory,
+             0x4EfE2452, 0x168A, 0x11d1, 0xBC, 0x76, 0x0, 0xc0, 0x4F, 0xB9, 0x45, 0x3B );
+DEFINE_GUID( CLSID_CMidiOutClassManager,
+             0x4EfE2452, 0x168A, 0x11d1, 0xBC, 0x76, 0x0, 0xc0, 0x4F, 0xB9, 0x45, 0x3B );
+
+// CC7BFB41-F175-11d1-A392-00E0291F3959     External Renderers Category
+DEFINE_GUID( CLSID_TransmitCategory,
+             0xcc7bfb41, 0xf175, 0x11d1, 0xa3, 0x92, 0x0, 0xe0, 0x29, 0x1f, 0x39, 0x59 );
+
+// CC7BFB46-F175-11d1-A392-00E0291F3959     Device Control Filters
+DEFINE_GUID( CLSID_DeviceControlCategory,
+             0xcc7bfb46, 0xf175, 0x11d1, 0xa3, 0x92, 0x0, 0xe0, 0x29, 0x1f, 0x39, 0x59 );
+
+// DA4E3DA0-D07D-11d0-BD50-00A0C911CE86
+DEFINE_GUID( CLSID_ActiveMovieCategories,
+             0xda4e3da0, 0xd07d, 0x11d0, 0xbd, 0x50, 0x0, 0xa0, 0xc9, 0x11, 0xce, 0x86 );
+
+// 2721AE20-7E70-11D0-A5D6-28DB04C10000
+DEFINE_GUID( CLSID_DVDHWDecodersCategory,
+             0x2721AE20, 0x7E70, 0x11D0, 0xA5, 0xD6, 0x28, 0xDB, 0x04, 0xC1, 0x00, 0x00 );
+
+// 7D22E920-5CA9-4787-8C2B-A6779BD11781     Encoder API encoder category
+DEFINE_GUID( CLSID_MediaEncoderCategory,
+             0x7D22E920, 0x5CA9, 0x4787, 0x8C, 0x2B, 0xA6, 0x77, 0x9B, 0xD1, 0x17, 0x81 );
+
+// 236C9559-ADCE-4736-BF72-BAB34E392196     Encoder API multiplexer category
+DEFINE_GUID( CLSID_MediaMultiplexerCategory,
+             0x236C9559, 0xADCE, 0x4736, 0xBF, 0x72, 0xBA, 0xB3, 0x4E, 0x39, 0x21, 0x96 );
+
+// CDA42200-BD88-11d0-BD4E-00A0C911CE86
+DEFINE_GUID( CLSID_FilterMapper2,
+             0xcda42200, 0xbd88, 0x11d0, 0xbd, 0x4e, 0x0, 0xa0, 0xc9, 0x11, 0xce, 0x86 );
+
+
+// 1e651cc0-b199-11d0-8212-00c04fc32c45
+DEFINE_GUID( CLSID_MemoryAllocator,
+             0x1e651cc0, 0xb199, 0x11d0, 0x82, 0x12, 0x00, 0xc0, 0x4f, 0xc3, 0x2c, 0x45 );
+
+// CDBD8D00-C193-11d0-BD4E-00A0C911CE86
+DEFINE_GUID( CLSID_MediaPropertyBag,
+             0xcdbd8d00, 0xc193, 0x11d0, 0xbd, 0x4e, 0x0, 0xa0, 0xc9, 0x11, 0xce, 0x86 );
+
+// FCC152B7-F372-11d0-8E00-00C04FD7C08B
+DEFINE_GUID( CLSID_DvdGraphBuilder,
+             0xFCC152B7, 0xF372, 0x11d0, 0x8E, 0x00, 0x00, 0xC0, 0x4F, 0xD7, 0xC0, 0x8B );
+
+// 9B8C4620-2C1A-11d0-8493-00A02438AD48
+DEFINE_GUID( CLSID_DVDNavigator,
+             0x9b8c4620, 0x2c1a, 0x11d0, 0x84, 0x93, 0x0, 0xa0, 0x24, 0x38, 0xad, 0x48 );
+
+// f963c5cf-a659-4a93-9638-caf3cd277d13
+DEFINE_GUID( CLSID_DVDState,
+             0xf963c5cf, 0xa659, 0x4a93, 0x96, 0x38, 0xca, 0xf3, 0xcd, 0x27, 0x7d, 0x13 );
+
+// CC58E280-8AA1-11d1-B3F1-00AA003761C5
+DEFINE_GUID( CLSID_SmartTee,
+             0xcc58e280, 0x8aa1, 0x11d1, 0xb3, 0xf1, 0x0, 0xaa, 0x0, 0x37, 0x61, 0xc5 );
+
+// FB056BA0-2502-45B9-8E86-2B40DE84AD29
+DEFINE_GUID( CLSID_DtvCcFilter,
+             0xfb056ba0, 0x2502, 0x45b9, 0x8e, 0x86, 0x2b, 0x40, 0xde, 0x84, 0xad, 0x29 );
+
+// 2F7EE4B6-6FF5-4EB4-B24A-2BFC41117171
+DEFINE_GUID( CLSID_CaptionsFilter,
+             0x2F7EE4B6, 0x6FF5, 0x4EB4, 0xB2, 0x4A, 0x2B, 0xFC, 0x41, 0x11, 0x71, 0x71 );
+
+// {9F22CFEA-CE07-41ab-8BA0-C7364AF90AF9}
+DEFINE_GUID( CLSID_SubtitlesFilter,
+             0x9f22cfea, 0xce07, 0x41ab, 0x8b, 0xa0, 0xc7, 0x36, 0x4a, 0xf9, 0x0a, 0xf9 );
+
+// {8670C736-F614-427b-8ADA-BBADC587194B}
+DEFINE_GUID( CLSID_DirectShowPluginControl,
+             0x8670c736, 0xf614, 0x427b, 0x8a, 0xda, 0xbb, 0xad, 0xc5, 0x87, 0x19, 0x4b );
+
+
+// -- format types ---
+
+// 0F6417D6-C318-11D0-A43F-00A0C9223196        FORMAT_None
+DEFINE_GUID( FORMAT_None,
+             0x0F6417D6, 0xc318, 0x11d0, 0xa4, 0x3f, 0x00, 0xa0, 0xc9, 0x22, 0x31, 0x96 );
+
+// 05589f80-c356-11ce-bf01-00aa0055595a        FORMAT_VideoInfo
+DEFINE_GUID( FORMAT_VideoInfo,
+             0x05589f80, 0xc356, 0x11ce, 0xbf, 0x01, 0x00, 0xaa, 0x00, 0x55, 0x59, 0x5a );
+
+// F72A76A0-EB0A-11d0-ACE4-0000C0CC16BA        FORMAT_VideoInfo2
+DEFINE_GUID( FORMAT_VideoInfo2,
+             0xf72a76A0, 0xeb0a, 0x11d0, 0xac, 0xe4, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+// 05589f81-c356-11ce-bf01-00aa0055595a        FORMAT_WaveFormatEx
+DEFINE_GUID( FORMAT_WaveFormatEx,
+             0x05589f81, 0xc356, 0x11ce, 0xbf, 0x01, 0x00, 0xaa, 0x00, 0x55, 0x59, 0x5a );
+
+// 05589f82-c356-11ce-bf01-00aa0055595a        FORMAT_MPEGVideo
+DEFINE_GUID( FORMAT_MPEGVideo,
+             0x05589f82, 0xc356, 0x11ce, 0xbf, 0x01, 0x00, 0xaa, 0x00, 0x55, 0x59, 0x5a );
+
+// 05589f83-c356-11ce-bf01-00aa0055595a        FORMAT_MPEGStreams
+DEFINE_GUID( FORMAT_MPEGStreams,
+             0x05589f83, 0xc356, 0x11ce, 0xbf, 0x01, 0x00, 0xaa, 0x00, 0x55, 0x59, 0x5a );
+
+// 05589f84-c356-11ce-bf01-00aa0055595a        FORMAT_DvInfo, DVINFO
+DEFINE_GUID( FORMAT_DvInfo,
+             0x05589f84, 0xc356, 0x11ce, 0xbf, 0x01, 0x00, 0xaa, 0x00, 0x55, 0x59, 0x5a );
+
+// C7ECF04D-4582-4869-9ABB-BFB523B62EDF       FORMAT_525WSS
+DEFINE_GUID( FORMAT_525WSS,
+             0xc7ecf04d, 0x4582, 0x4869, 0x9a, 0xbb, 0xbf, 0xb5, 0x23, 0xb6, 0x2e, 0xdf );
+
+// -- Video related GUIDs ---
+
+// 944d4c00-dd52-11ce-bf0e-00aa0055595a
+DEFINE_GUID( CLSID_DirectDrawProperties,
+             0x944d4c00, 0xdd52, 0x11ce, 0xbf, 0x0e, 0x00, 0xaa, 0x00, 0x55, 0x59, 0x5a );
+
+// 59ce6880-acf8-11cf-b56e-0080c7c4b68a
+DEFINE_GUID( CLSID_PerformanceProperties,
+             0x59ce6880, 0xacf8, 0x11cf, 0xb5, 0x6e, 0x00, 0x80, 0xc7, 0xc4, 0xb6, 0x8a );
+
+// 418afb70-f8b8-11ce-aac6-0020af0b99a3
+DEFINE_GUID( CLSID_QualityProperties,
+             0x418afb70, 0xf8b8, 0x11ce, 0xaa, 0xc6, 0x00, 0x20, 0xaf, 0x0b, 0x99, 0xa3 );
+
+// 61ded640-e912-11ce-a099-00aa00479a58
+DEFINE_GUID( IID_IBaseVideoMixer,
+             0x61ded640, 0xe912, 0x11ce, 0xa0, 0x99, 0x00, 0xaa, 0x00, 0x47, 0x9a, 0x58 );
+
+// 36d39eb0-dd75-11ce-bf0e-00aa0055595a
+DEFINE_GUID( IID_IDirectDrawVideo,
+             0x36d39eb0, 0xdd75, 0x11ce, 0xbf, 0x0e, 0x00, 0xaa, 0x00, 0x55, 0x59, 0x5a );
+
+// bd0ecb0-f8e2-11ce-aac6-0020af0b99a3
+DEFINE_GUID( IID_IQualProp,
+             0x1bd0ecb0, 0xf8e2, 0x11ce, 0xaa, 0xc6, 0x00, 0x20, 0xaf, 0x0b, 0x99, 0xa3 );
+
+// {CE292861-FC88-11d0-9E69-00C04FD7C15B}
+DEFINE_GUID( CLSID_VPObject,
+             0xce292861, 0xfc88, 0x11d0, 0x9e, 0x69, 0x0, 0xc0, 0x4f, 0xd7, 0xc1, 0x5b );
+
+// {CE292862-FC88-11d0-9E69-00C04FD7C15B}
+DEFINE_GUID( IID_IVPObject,
+             0xce292862, 0xfc88, 0x11d0, 0x9e, 0x69, 0x0, 0xc0, 0x4f, 0xd7, 0xc1, 0x5b );
+
+// {25DF12C1-3DE0-11d1-9E69-00C04FD7C15B}
+DEFINE_GUID( IID_IVPControl,
+             0x25df12c1, 0x3de0, 0x11d1, 0x9e, 0x69, 0x0, 0xc0, 0x4f, 0xd7, 0xc1, 0x5b );
+
+// {814B9801-1C88-11d1-BAD9-00609744111A}
+DEFINE_GUID( CLSID_VPVBIObject,
+             0x814b9801, 0x1c88, 0x11d1, 0xba, 0xd9, 0x0, 0x60, 0x97, 0x44, 0x11, 0x1a );
+
+// {814B9802-1C88-11d1-BAD9-00609744111A}
+DEFINE_GUID( IID_IVPVBIObject,
+             0x814b9802, 0x1c88, 0x11d1, 0xba, 0xd9, 0x0, 0x60, 0x97, 0x44, 0x11, 0x1a );
+
+// {BC29A660-30E3-11d0-9E69-00C04FD7C15B}
+DEFINE_GUID( IID_IVPConfig,
+             0xbc29a660, 0x30e3, 0x11d0, 0x9e, 0x69, 0x0, 0xc0, 0x4f, 0xd7, 0xc1, 0x5b );
+
+// {C76794A1-D6C5-11d0-9E69-00C04FD7C15B}
+DEFINE_GUID( IID_IVPNotify,
+             0xc76794a1, 0xd6c5, 0x11d0, 0x9e, 0x69, 0x0, 0xc0, 0x4f, 0xd7, 0xc1, 0x5b );
+
+// {EBF47183-8764-11d1-9E69-00C04FD7C15B}
+DEFINE_GUID( IID_IVPNotify2,
+             0xebf47183, 0x8764, 0x11d1, 0x9e, 0x69, 0x0, 0xc0, 0x4f, 0xd7, 0xc1, 0x5b );
+
+
+// {EC529B00-1A1F-11D1-BAD9-00609744111A}
+DEFINE_GUID( IID_IVPVBIConfig,
+             0xec529b00, 0x1a1f, 0x11d1, 0xba, 0xd9, 0x0, 0x60, 0x97, 0x44, 0x11, 0x1a );
+
+// {EC529B01-1A1F-11D1-BAD9-00609744111A}
+DEFINE_GUID( IID_IVPVBINotify,
+             0xec529b01, 0x1a1f, 0x11d1, 0xba, 0xd9, 0x0, 0x60, 0x97, 0x44, 0x11, 0x1a );
+
+// {593CDDE1-0759-11d1-9E69-00C04FD7C15B}
+DEFINE_GUID( IID_IMixerPinConfig,
+             0x593cdde1, 0x759, 0x11d1, 0x9e, 0x69, 0x0, 0xc0, 0x4f, 0xd7, 0xc1, 0x5b );
+
+// {EBF47182-8764-11d1-9E69-00C04FD7C15B}
+DEFINE_GUID( IID_IMixerPinConfig2,
+             0xebf47182, 0x8764, 0x11d1, 0x9e, 0x69, 0x0, 0xc0, 0x4f, 0xd7, 0xc1, 0x5b );
+
+// -- Analog video related GUIDs ---
+
+
+// -- format types ---
+// 0482DDE0-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( FORMAT_AnalogVideo,
+                0x482dde0, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+
+// -- major type, Analog Video
+
+// 0482DDE1-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIATYPE_AnalogVideo,
+             0x482dde1, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+
+// -- Analog Video subtypes, NTSC
+
+// 0482DDE2-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_NTSC_M,
+             0x482dde2, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// -- Analog Video subtypes, PAL
+
+// 0482DDE5-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_PAL_B,
+             0x482dde5, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// 0482DDE6-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_PAL_D,
+             0x482dde6, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// 0482DDE7-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_PAL_G,
+             0x482dde7, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// 0482DDE8-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_PAL_H,
+             0x482dde8, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// 0482DDE9-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_PAL_I,
+             0x482dde9, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// 0482DDEA-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_PAL_M,
+             0x482ddea, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// 0482DDEB-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_PAL_N,
+             0x482ddeb, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// 0482DDEC-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_PAL_N_COMBO,
+             0x482ddec, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// -- Analog Video subtypes, SECAM
+
+// 0482DDF0-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_SECAM_B,
+             0x482ddf0, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// 0482DDF1-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_SECAM_D,
+             0x482ddf1, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// 0482DDF2-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_SECAM_G,
+             0x482ddf2, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// 0482DDF3-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_SECAM_H,
+             0x482ddf3, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// 0482DDF4-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_SECAM_K,
+             0x482ddf4, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// 0482DDF5-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_SECAM_K1,
+             0x482ddf5, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// 0482DDF6-7817-11cf-8A03-00AA006ECB65
+DEFINE_GUID( MEDIASUBTYPE_AnalogVideo_SECAM_L,
+             0x482ddf6, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+
+// --  External audio related GUIDs ---
+
+// -- major types, Analog Audio
+
+// 0482DEE1-7817-11cf-8a03-00aa006ecb65
+DEFINE_GUID( MEDIATYPE_AnalogAudio,
+             0x482dee1, 0x7817, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// --  Video analysis related GUIDs ---
+
+// -- format types used by VA -- H.264, captioning
+
+// {A4EFC024-873E-4da3-898B-474DDBD79FD0}
+DEFINE_GUID( FORMAT_CAPTIONED_H264VIDEO,
+             0xa4efc024, 0x873e, 0x4da3, 0x89, 0x8b, 0x47, 0x4d, 0xdb, 0xd7, 0x9f, 0xd0 );
+
+// -- media, media subtype, and format types, CC container
+
+// {50997A4A-E508-4054-A2B2-10FF0AC1A69A}
+DEFINE_GUID( FORMAT_CC_CONTAINER,
+             0x50997a4a, 0xe508, 0x4054, 0xa2, 0xb2, 0x10, 0xff, 0xa, 0xc1, 0xa6, 0x9a );
+
+// {3ED9CB31-FD10-4ade-BCCC-FB9105D2F3EF}
+DEFINE_GUID( CAPTION_FORMAT_ATSC,
+             0x3ed9cb31, 0xfd10, 0x4ade, 0xbc, 0xcc, 0xfb, 0x91, 0x5, 0xd2, 0xf3, 0xef );
+
+// {12230DB4-FF2A-447e-BB88-6841C416D068}
+DEFINE_GUID( CAPTION_FORMAT_DVB,
+             0x12230db4, 0xff2a, 0x447e, 0xbb, 0x88, 0x68, 0x41, 0xc4, 0x16, 0xd0, 0x68 );
+
+// {E9CA1CE7-915E-47be-9BB9-BF1D8A13A5EC}
+DEFINE_GUID( CAPTION_FORMAT_DIRECTV,
+             0xe9ca1ce7, 0x915e, 0x47be, 0x9b, 0xb9, 0xbf, 0x1d, 0x8a, 0x13, 0xa5, 0xec );
+
+// {EBB1A262-1158-4b99-AE80-92AC776952C4}
+DEFINE_GUID( CAPTION_FORMAT_ECHOSTAR,
+             0xebb1a262, 0x1158, 0x4b99, 0xae, 0x80, 0x92, 0xac, 0x77, 0x69, 0x52, 0xc4 );
+
+// -- format types, MPEG-2
+
+// {7AB2ADA2-81B6-4f14-B3C8-D0C486393B67}
+DEFINE_GUID( FORMAT_CAPTIONED_MPEG2VIDEO,
+             0x7ab2ada2, 0x81b6, 0x4f14, 0xb3, 0xc8, 0xd0, 0xc4, 0x86, 0x39, 0x3b, 0x67 );
+
+//
+// DirectShow's include file based on ksmedia.h from WDM DDK
+//
+
+// -- Well known time format GUIDs ---
+
+
+// 00000000-0000-0000-0000-000000000000
+DEFINE_GUID( TIME_FORMAT_NONE,
+             0L, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 );
+
+// 7b785570-8c82-11cf-bc0c-00aa00ac74f6
+DEFINE_GUID( TIME_FORMAT_FRAME,
+             0x7b785570, 0x8c82, 0x11cf, 0xbc, 0xc, 0x0, 0xaa, 0x0, 0xac, 0x74, 0xf6 );
+
+// 7b785571-8c82-11cf-bc0c-00aa00ac74f6
+DEFINE_GUID( TIME_FORMAT_BYTE,
+             0x7b785571, 0x8c82, 0x11cf, 0xbc, 0xc, 0x0, 0xaa, 0x0, 0xac, 0x74, 0xf6 );
+
+// 7b785572-8c82-11cf-bc0c-00aa00ac74f6
+DEFINE_GUID( TIME_FORMAT_SAMPLE,
+             0x7b785572, 0x8c82, 0x11cf, 0xbc, 0xc, 0x0, 0xaa, 0x0, 0xac, 0x74, 0xf6 );
+
+// 7b785573-8c82-11cf-bc0c-00aa00ac74f6
+DEFINE_GUID( TIME_FORMAT_FIELD,
+             0x7b785573, 0x8c82, 0x11cf, 0xbc, 0xc, 0x0, 0xaa, 0x0, 0xac, 0x74, 0xf6 );
+
+
+// 7b785574-8c82-11cf-bc0c-00aa00ac74f6
+DEFINE_GUID( TIME_FORMAT_MEDIA_TIME,
+             0x7b785574, 0x8c82, 0x11cf, 0xbc, 0xc, 0x0, 0xaa, 0x0, 0xac, 0x74, 0xf6 );
+
+
+// for IKsPropertySet
+
+// 9B00F101-1567-11d1-B3F1-00AA003761C5
+DEFINE_GUID( AMPROPSETID_Pin,
+             0x9b00f101, 0x1567, 0x11d1, 0xb3, 0xf1, 0x0, 0xaa, 0x0, 0x37, 0x61, 0xc5 );
+
+// fb6c4281-0353-11d1-905f-0000c0cc16ba
+DEFINE_GUID( PIN_CATEGORY_CAPTURE,
+             0xfb6c4281, 0x0353, 0x11d1, 0x90, 0x5f, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+// fb6c4282-0353-11d1-905f-0000c0cc16ba
+DEFINE_GUID( PIN_CATEGORY_PREVIEW,
+             0xfb6c4282, 0x0353, 0x11d1, 0x90, 0x5f, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+// fb6c4283-0353-11d1-905f-0000c0cc16ba
+DEFINE_GUID( PIN_CATEGORY_ANALOGVIDEOIN,
+             0xfb6c4283, 0x0353, 0x11d1, 0x90, 0x5f, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+// fb6c4284-0353-11d1-905f-0000c0cc16ba
+DEFINE_GUID( PIN_CATEGORY_VBI,
+             0xfb6c4284, 0x0353, 0x11d1, 0x90, 0x5f, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+// fb6c4285-0353-11d1-905f-0000c0cc16ba
+DEFINE_GUID( PIN_CATEGORY_VIDEOPORT,
+             0xfb6c4285, 0x0353, 0x11d1, 0x90, 0x5f, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+// fb6c4286-0353-11d1-905f-0000c0cc16ba
+DEFINE_GUID( PIN_CATEGORY_NABTS,
+             0xfb6c4286, 0x0353, 0x11d1, 0x90, 0x5f, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+// fb6c4287-0353-11d1-905f-0000c0cc16ba
+DEFINE_GUID( PIN_CATEGORY_EDS,
+             0xfb6c4287, 0x0353, 0x11d1, 0x90, 0x5f, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+// fb6c4288-0353-11d1-905f-0000c0cc16ba
+DEFINE_GUID( PIN_CATEGORY_TELETEXT,
+             0xfb6c4288, 0x0353, 0x11d1, 0x90, 0x5f, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+// fb6c4289-0353-11d1-905f-0000c0cc16ba
+DEFINE_GUID( PIN_CATEGORY_CC,
+             0xfb6c4289, 0x0353, 0x11d1, 0x90, 0x5f, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+// fb6c428a-0353-11d1-905f-0000c0cc16ba
+DEFINE_GUID( PIN_CATEGORY_STILL,
+             0xfb6c428a, 0x0353, 0x11d1, 0x90, 0x5f, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+// fb6c428b-0353-11d1-905f-0000c0cc16ba
+DEFINE_GUID( PIN_CATEGORY_TIMECODE,
+             0xfb6c428b, 0x0353, 0x11d1, 0x90, 0x5f, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+// fb6c428c-0353-11d1-905f-0000c0cc16ba
+DEFINE_GUID( PIN_CATEGORY_VIDEOPORT_VBI,
+             0xfb6c428c, 0x0353, 0x11d1, 0x90, 0x5f, 0x00, 0x00, 0xc0, 0xcc, 0x16, 0xba );
+
+
+// the following special GUIDS are used by ICaptureGraphBuilder::FindInterface
+
+// {AC798BE0-98E3-11d1-B3F1-00AA003761C5}
+DEFINE_GUID( LOOK_UPSTREAM_ONLY,
+             0xac798be0, 0x98e3, 0x11d1, 0xb3, 0xf1, 0x0, 0xaa, 0x0, 0x37, 0x61, 0xc5 );
+
+// {AC798BE1-98E3-11d1-B3F1-00AA003761C5}
+DEFINE_GUID( LOOK_DOWNSTREAM_ONLY,
+             0xac798be1, 0x98e3, 0x11d1, 0xb3, 0xf1, 0x0, 0xaa, 0x0, 0x37, 0x61, 0xc5 );
+
+// -------------------------------------------------------------------------
+// KSProxy GUIDS
+// -------------------------------------------------------------------------
+
+// {266EEE41-6C63-11cf-8A03-00AA006ECB65}
+DEFINE_GUID( CLSID_TVTunerFilterPropertyPage,
+             0x266eee41, 0x6c63, 0x11cf, 0x8a, 0x3, 0x0, 0xaa, 0x0, 0x6e, 0xcb, 0x65 );
+
+// {71F96461-78F3-11d0-A18C-00A0C9118956}
+DEFINE_GUID( CLSID_CrossbarFilterPropertyPage,
+             0x71f96461, 0x78f3, 0x11d0, 0xa1, 0x8c, 0x0, 0xa0, 0xc9, 0x11, 0x89, 0x56 );
+
+// {71F96463-78F3-11d0-A18C-00A0C9118956}
+DEFINE_GUID( CLSID_TVAudioFilterPropertyPage,
+             0x71f96463, 0x78f3, 0x11d0, 0xa1, 0x8c, 0x0, 0xa0, 0xc9, 0x11, 0x89, 0x56 );
+
+// {71F96464-78F3-11d0-A18C-00A0C9118956}
+DEFINE_GUID( CLSID_VideoProcAmpPropertyPage,
+             0x71f96464, 0x78f3, 0x11d0, 0xa1, 0x8c, 0x0, 0xa0, 0xc9, 0x11, 0x89, 0x56 );
+
+// {71F96465-78F3-11d0-A18C-00A0C9118956}
+DEFINE_GUID( CLSID_CameraControlPropertyPage,
+             0x71f96465, 0x78f3, 0x11d0, 0xa1, 0x8c, 0x0, 0xa0, 0xc9, 0x11, 0x89, 0x56 );
+
+// {71F96466-78F3-11d0-A18C-00A0C9118956}
+DEFINE_GUID( CLSID_AnalogVideoDecoderPropertyPage,
+             0x71f96466, 0x78f3, 0x11d0, 0xa1, 0x8c, 0x0, 0xa0, 0xc9, 0x11, 0x89, 0x56 );
+
+// {71F96467-78F3-11d0-A18C-00A0C9118956}
+DEFINE_GUID( CLSID_VideoStreamConfigPropertyPage,
+             0x71f96467, 0x78f3, 0x11d0, 0xa1, 0x8c, 0x0, 0xa0, 0xc9, 0x11, 0x89, 0x56 );
+
+// {37E92A92-D9AA-11d2-BF84-8EF2B1555AED} Audio Renderer Advanced Property Page
+DEFINE_GUID( CLSID_AudioRendererAdvancedProperties,
+             0x37e92a92, 0xd9aa, 0x11d2, 0xbf, 0x84, 0x8e, 0xf2, 0xb1, 0x55, 0x5a, 0xed );
+
+
+// -------------------------------------------------------------------------
+// VMR GUIDS
+// -------------------------------------------------------------------------
+
+// {B87BEB7B-8D29-423f-AE4D-6582C10175AC}
+DEFINE_GUID( CLSID_VideoMixingRenderer,
+             0xB87BEB7B, 0x8D29, 0x423f, 0xAE, 0x4D, 0x65, 0x82, 0xC1, 0x01, 0x75, 0xAC );
+
+// {6BC1CFFA-8FC1-4261-AC22-CFB4CC38DB50}
+DEFINE_GUID( CLSID_VideoRendererDefault,
+             0x6BC1CFFA, 0x8FC1, 0x4261, 0xAC, 0x22, 0xCF, 0xB4, 0xCC, 0x38, 0xDB, 0x50 );
+
+// {99d54f63-1a69-41ae-aa4d-c976eb3f0713}
+DEFINE_GUID( CLSID_AllocPresenter,
+             0x99d54f63, 0x1a69, 0x41ae, 0xaa, 0x4d, 0xc9, 0x76, 0xeb, 0x3f, 0x07, 0x13 );
+
+// {4444ac9e-242e-471b-a3c7-45dcd46352bc}
+DEFINE_GUID( CLSID_AllocPresenterDDXclMode,
+             0x4444ac9e, 0x242e, 0x471b, 0xa3, 0xc7, 0x45, 0xdc, 0xd4, 0x63, 0x52, 0xbc );
+
+// {6f26a6cd-967b-47fd-874a-7aed2c9d25a2}
+DEFINE_GUID( CLSID_VideoPortManager,
+             0x6f26a6cd, 0x967b, 0x47fd, 0x87, 0x4a, 0x7a, 0xed, 0x2c, 0x9d, 0x25, 0xa2 );
+
+
+// -------------------------------------------------------------------------
+// VMR GUIDS for DX9
+// -------------------------------------------------------------------------
+
+// {51b4abf3-748f-4e3b-a276-c828330e926a}
+DEFINE_GUID( CLSID_VideoMixingRenderer9,
+             0x51b4abf3, 0x748f, 0x4e3b, 0xa2, 0x76, 0xc8, 0x28, 0x33, 0x0e, 0x92, 0x6a );
+
+
+// -------------------------------------------------------------------------
+// EVR GUIDS
+// -------------------------------------------------------------------------
+
+// {FA10746C-9B63-4b6c-BC49-FC300EA5F256}
+DEFINE_GUID( CLSID_EnhancedVideoRenderer,
+             0xfa10746c, 0x9b63, 0x4b6c, 0xbc, 0x49, 0xfc, 0x30, 0xe, 0xa5, 0xf2, 0x56 );
+
+// {E474E05A-AB65-4f6a-827C-218B1BAAF31F}
+DEFINE_GUID( CLSID_MFVideoMixer9,
+             0xE474E05A, 0xAB65, 0x4f6a, 0x82, 0x7C, 0x21, 0x8B, 0x1B, 0xAA, 0xF3, 0x1F );
+
+// {98455561-5136-4d28-AB08-4CEE40EA2781}
+DEFINE_GUID( CLSID_MFVideoPresenter9,
+             0x98455561, 0x5136, 0x4d28, 0xab, 0x8, 0x4c, 0xee, 0x40, 0xea, 0x27, 0x81 );
+
+// {a0a7a57b-59b2-4919-a694-add0a526c373}
+DEFINE_GUID( CLSID_EVRTearlessWindowPresenter9,
+             0xa0a7a57b, 0x59b2, 0x4919, 0xa6, 0x94, 0xad, 0xd0, 0xa5, 0x26, 0xc3, 0x73 );
+
+// {62079164-233b-41f8-a80f-f01705f514a8}
+DEFINE_GUID( CLSID_EVRPlaybackPipelineOptimizer,
+             0x62079164, 0x233b, 0x41f8, 0xa8, 0x0f, 0xf0, 0x17, 0x05, 0xf5, 0x14, 0xa8 );
+// {24B2280A-B2AA-4777-BF65-63F35E7B024A}
+DEFINE_GUID( EVENTID_FormatNotSupportedEvent,
+             0x24b2280a, 0xb2aa, 0x4777, 0xbf, 0x65, 0x63, 0xf3, 0x5e, 0x7b, 0x2, 0x4a );
+// {16155770-AED5-475c-BB98-95A33070DF0C}
+DEFINE_GUID( EVENTID_DemultiplexerFilterDiscontinuity,
+             0x16155770, 0xaed5, 0x475c, 0xbb, 0x98, 0x95, 0xa3, 0x30, 0x70, 0xdf, 0xc );
+// {40749583-6b9d-4eec-b43c-67a1801e1a9b}
+DEFINE_GUID( DSATTRIB_WMDRMProtectionInfo, 0x40749583, 0x6b9d, 0x4eec, 0xb4, 0x3c, 0x67, 0xa1, 0x80, 0x1e, 0x1a, 0x9b );
+// {e4846dda-5838-42b4-b897-6f7e5faa2f2f}
+DEFINE_GUID( DSATTRIB_BadSampleInfo, 0xe4846dda, 0x5838, 0x42b4, 0xb8, 0x97, 0x6f, 0x7e, 0x5f, 0xaa, 0x2f, 0x2f );
+
+// {e447df01-10ca-4d17-b17e-6a840f8a3a4c}
+// {e447df02-10ca-4d17-b17e-6a840f8a3a4c}
+// {e447df03-10ca-4d17-b17e-6a840f8a3a4c}
+// {e447df04-10ca-4d17-b17e-6a840f8a3a4c}
+// {e447df05-10ca-4d17-b17e-6a840f8a3a4c}
+// {e447df06-10ca-4d17-b17e-6a840f8a3a4c}
+// {e447df07-10ca-4d17-b17e-6a840f8a3a4c}
+// {e447df08-10ca-4d17-b17e-6a840f8a3a4c}
+// {e447df09-10ca-4d17-b17e-6a840f8a3a4c}
+// {e447df0a-10ca-4d17-b17e-6a840f8a3a4c}
+DEFINE_GUID( EVRConfig_ForceBob, 0xe447df01, 0x10ca, 0x4d17, 0xb1, 0x7e, 0x6a, 0x84, 0x0f, 0x8a, 0x3a, 0x4c );
+DEFINE_GUID( EVRConfig_AllowDropToBob, 0xe447df02, 0x10ca, 0x4d17, 0xb1, 0x7e, 0x6a, 0x84, 0x0f, 0x8a, 0x3a, 0x4c );
+DEFINE_GUID( EVRConfig_ForceThrottle, 0xe447df03, 0x10ca, 0x4d17, 0xb1, 0x7e, 0x6a, 0x84, 0x0f, 0x8a, 0x3a, 0x4c );
+DEFINE_GUID( EVRConfig_AllowDropToThrottle, 0xe447df04, 0x10ca, 0x4d17, 0xb1, 0x7e, 0x6a, 0x84, 0x0f, 0x8a, 0x3a, 0x4c );
+DEFINE_GUID( EVRConfig_ForceHalfInterlace, 0xe447df05, 0x10ca, 0x4d17, 0xb1, 0x7e, 0x6a, 0x84, 0x0f, 0x8a, 0x3a, 0x4c );
+DEFINE_GUID( EVRConfig_AllowDropToHalfInterlace, 0xe447df06, 0x10ca, 0x4d17, 0xb1, 0x7e, 0x6a, 0x84, 0x0f, 0x8a, 0x3a, 0x4c );
+DEFINE_GUID( EVRConfig_ForceScaling, 0xe447df07, 0x10ca, 0x4d17, 0xb1, 0x7e, 0x6a, 0x84, 0x0f, 0x8a, 0x3a, 0x4c );
+DEFINE_GUID( EVRConfig_AllowScaling, 0xe447df08, 0x10ca, 0x4d17, 0xb1, 0x7e, 0x6a, 0x84, 0x0f, 0x8a, 0x3a, 0x4c );
+DEFINE_GUID( EVRConfig_ForceBatching, 0xe447df09, 0x10ca, 0x4d17, 0xb1, 0x7e, 0x6a, 0x84, 0x0f, 0x8a, 0x3a, 0x4c );
+DEFINE_GUID( EVRConfig_AllowBatching, 0xe447df0a, 0x10ca, 0x4d17, 0xb1, 0x7e, 0x6a, 0x84, 0x0f, 0x8a, 0x3a, 0x4c );
+
+
+// -------------------------------------------------------------------------
+// BDA Network Provider GUIDS
+// -------------------------------------------------------------------------
+
+// This is the GUID for the generic NP which would replace ATSC, DVBT, DVBS
+// and DVBC NP. All the other GUIDs are still kept for backward compatibility
+// {B2F3A67C-29DA-4c78-8831-091ED509A475}
+DEFINE_GUID( CLSID_NetworkProvider,
+             0xb2f3a67c, 0x29da, 0x4c78, 0x88, 0x31, 0x9, 0x1e, 0xd5, 0x9, 0xa4, 0x75 );
+
+// {0DAD2FDD-5FD7-11D3-8F50-00C04F7971E2}
+DEFINE_GUID( CLSID_ATSCNetworkProvider,
+             0x0dad2fdd, 0x5fd7, 0x11d3, 0x8f, 0x50, 0x00, 0xc0, 0x4f, 0x79, 0x71, 0xe2 );
+
+// {E3444D16-5AC4-4386-88DF-13FD230E1DDA}
+DEFINE_GUID( CLSID_ATSCNetworkPropertyPage,
+             0xe3444d16, 0x5ac4, 0x4386, 0x88, 0xdf, 0x13, 0xfd, 0x23, 0x0e, 0x1d, 0xda );
+
+// {FA4B375A-45B4-4d45-8440-263957B11623}
+DEFINE_GUID( CLSID_DVBSNetworkProvider,
+             0xfa4b375a, 0x45b4, 0x4d45, 0x84, 0x40, 0x26, 0x39, 0x57, 0xb1, 0x16, 0x23 );
+
+// {216C62DF-6D7F-4e9a-8571-05F14EDB766A}
+DEFINE_GUID( CLSID_DVBTNetworkProvider,
+             0x216c62df, 0x6d7f, 0x4e9a, 0x85, 0x71, 0x5, 0xf1, 0x4e, 0xdb, 0x76, 0x6a );
+
+// {DC0C0FE7-0485-4266-B93F-68FBF80ED834}
+DEFINE_GUID( CLSID_DVBCNetworkProvider,
+             0xdc0c0fe7, 0x485, 0x4266, 0xb9, 0x3f, 0x68, 0xfb, 0xf8, 0xe, 0xd8, 0x34 );
+
+// -------------------------------------------------------------------------
+// attribute GUIDs
+// -------------------------------------------------------------------------
+
+// {EB7836CA-14FF-4919-BCE7-3AF12319E50C}
+DEFINE_GUID( DSATTRIB_UDCRTag,
+             0xEB7836CA, 0x14FF, 0x4919, 0xbc, 0xe7, 0x3a, 0xf1, 0x23, 0x19, 0xe5, 0x0c );
+
+// {2F5BAE02-7B8F-4f60-82D6-E4EA2F1F4C99}
+DEFINE_GUID( DSATTRIB_PicSampleSeq,
+             0x2f5bae02, 0x7b8f, 0x4f60, 0x82, 0xd6, 0xe4, 0xea, 0x2f, 0x1f, 0x4c, 0x99 );
+
+// {5A5F08CA-55C2-4033-92AB-55DB8F781226}
+DEFINE_GUID( DSATTRIB_OptionalVideoAttributes,
+             0x5A5F08CA, 0x55C2, 0x4033, 0x92, 0xAB, 0x55, 0xDB, 0x8F, 0x78, 0x12, 0x26 );
+
+// {e7e050fb-dd5d-40dd-9915-35dcb81bdc8a}
+DEFINE_GUID( DSATTRIB_CC_CONTAINER_INFO,
+             0xe7e050fb, 0xdd5d, 0x40dd, 0x99, 0x15, 0x35, 0xDC, 0xB8, 0x1B, 0xDC, 0x8a );
+
+// {B622F612-47AD-4671-AD6C-05A98E65DE3A}
+DEFINE_GUID( DSATTRIB_TRANSPORT_PROPERTIES,
+             0xb622f612, 0x47ad, 0x4671, 0xad, 0x6c, 0x5, 0xa9, 0x8e, 0x65, 0xde, 0x3a );
+
+// {e0b56679-12b9-43cc-b7df-578caa5a7b63}
+DEFINE_GUID( DSATTRIB_PBDATAG_ATTRIBUTE,
+             0xe0b56679, 0x12b9, 0x43cc, 0xb7, 0xdf, 0x57, 0x8c, 0xaa, 0x5a, 0x7b, 0x63 );
+
+// {0c1a5614-30cd-4f40-bcbf-d03e52306207}
+DEFINE_GUID( DSATTRIB_CAPTURE_STREAMTIME,
+             0x0c1a5614, 0x30cd, 0x4f40, 0xbc, 0xbf, 0xd0, 0x3e, 0x52, 0x30, 0x62, 0x07 );
+
+// {5FB5673B-0A2A-4565-827B-6853FD75E611}               DSATTRIB_DSHOW_STREAM_DESC
+DEFINE_GUID( DSATTRIB_DSHOW_STREAM_DESC,
+             0x5fb5673b, 0xa2a, 0x4565, 0x82, 0x7b, 0x68, 0x53, 0xfd, 0x75, 0xe6, 0x11 );
+
+// {892CD111-72F3-411d-8B91-A9E9123AC29A}
+DEFINE_GUID( DSATTRIB_SAMPLE_LIVE_STREAM_TIME,
+             0x892cd111, 0x72f3, 0x411d, 0x8b, 0x91, 0xa9, 0xe9, 0x12, 0x3a, 0xc2, 0x9a );
+
+// UUID for supported UDRI TAG tables
+DEFINE_GUID( UUID_UdriTagTables,
+             0xe1b98d74, 0x9778, 0x4878, 0xb6, 0x64, 0xeb, 0x20, 0x20, 0x36, 0x4d, 0x88 );
+
+// UUID for supported WMDRM TAG tables
+DEFINE_GUID( UUID_WMDRMTagTables,
+             0x5DCD1101, 0x9263, 0x45bb, 0xa4, 0xd5, 0xc4, 0x15, 0xab, 0x8c, 0x58, 0x9c );
+
+// -------------------------------------------------------------------------
+// TVE Receiver filter guids
+// -------------------------------------------------------------------------
+
+// The CLSID used by the TVE Receiver filter
+// {05500280-FAA5-4DF9-8246-BFC23AC5CEA8}
+DEFINE_GUID( CLSID_DShowTVEFilter,
+             0x05500280, 0xFAA5, 0x4DF9, 0x82, 0x46, 0xBF, 0xC2, 0x3A, 0xC5, 0xCE, 0xA8 );
+
+// {05500281-FAA5-4DF9-8246-BFC23AC5CEA8}
+DEFINE_GUID( CLSID_TVEFilterTuneProperties,
+             0x05500281, 0xFAA5, 0x4DF9, 0x82, 0x46, 0xBF, 0xC2, 0x3A, 0xC5, 0xCE, 0xA8 );
+
+
+// {05500282-FAA5-4DF9-8246-BFC23AC5CEA8}
+DEFINE_GUID( CLSID_TVEFilterCCProperties,
+             0x05500282, 0xFAA5, 0x4DF9, 0x82, 0x46, 0xBF, 0xC2, 0x3A, 0xC5, 0xCE, 0xA8 );
+
+// {05500283-FAA5-4DF9-8246-BFC23AC5CEA8}
+DEFINE_GUID( CLSID_TVEFilterStatsProperties,
+             0x05500283, 0xFAA5, 0x4DF9, 0x82, 0x46, 0xBF, 0xC2, 0x3A, 0xC5, 0xCE, 0xA8 );
+
+// -------------------------------------------------------------------------
+// Defined ENCAPI parameter GUIDs
+// -------------------------------------------------------------------------
+
+// The CLSID for the original IVideoEncoder proxy plug-in
+// {B43C4EEC-8C32-4791-9102-508ADA5EE8E7}
+DEFINE_GUID( CLSID_IVideoEncoderProxy,
+             0xb43c4eec, 0x8c32, 0x4791, 0x91, 0x2, 0x50, 0x8a, 0xda, 0x5e, 0xe8, 0xe7 );
+
+// The CLSID for the ICodecAPI proxy plug-in
+// {7ff0997a-1999-4286-a73c-622b8814e7eb}
+DEFINE_GUID( CLSID_ICodecAPIProxy,
+             0x7ff0997a, 0x1999, 0x4286, 0xa7, 0x3c, 0x62, 0x2b, 0x88, 0x14, 0xe7, 0xeb );
+
+// The CLSID for the combination ICodecAPI/IVideoEncoder proxy plug-in
+// {b05dabd9-56e5-4fdc-afa4-8a47e91f1c9c}
+DEFINE_GUID( CLSID_IVideoEncoderCodecAPIProxy,
+             0xb05dabd9, 0x56e5, 0x4fdc, 0xaf, 0xa4, 0x8a, 0x47, 0xe9, 0x1f, 0x1c, 0x9c );
+
+
+// {49CC4C43-CA83-4ad4-A9AF-F3696AF666DF}
+DEFINE_GUID( ENCAPIPARAM_BITRATE,
+             0x49cc4c43, 0xca83, 0x4ad4, 0xa9, 0xaf, 0xf3, 0x69, 0x6a, 0xf6, 0x66, 0xdf );
+
+// {703F16A9-3D48-44a1-B077-018DFF915D19}
+DEFINE_GUID( ENCAPIPARAM_PEAK_BITRATE,
+             0x703f16a9, 0x3d48, 0x44a1, 0xb0, 0x77, 0x1, 0x8d, 0xff, 0x91, 0x5d, 0x19 );
+
+// {EE5FB25C-C713-40d1-9D58-C0D7241E250F}
+DEFINE_GUID( ENCAPIPARAM_BITRATE_MODE,
+             0xee5fb25c, 0xc713, 0x40d1, 0x9d, 0x58, 0xc0, 0xd7, 0x24, 0x1e, 0x25, 0xf );
+
+// {0C0171DB-FEFC-4af7-9991-A5657C191CD1}
+DEFINE_GUID( ENCAPIPARAM_SAP_MODE,
+             0xc0171db, 0xfefc, 0x4af7, 0x99, 0x91, 0xa5, 0x65, 0x7c, 0x19, 0x1c, 0xd1 );
+
+// for kernel control
+
+// {62b12acf-f6b0-47d9-9456-96f22c4e0b9d}
+DEFINE_GUID( CODECAPI_CHANGELISTS,
+             0x62b12acf, 0xf6b0, 0x47d9, 0x94, 0x56, 0x96, 0xf2, 0x2c, 0x4e, 0x0b, 0x9d );
+
+// {7112e8e1-3d03-47ef-8e60-03f1cf537301 }
+DEFINE_GUID( CODECAPI_VIDEO_ENCODER,
+             0x7112e8e1, 0x3d03, 0x47ef, 0x8e, 0x60, 0x03, 0xf1, 0xcf, 0x53, 0x73, 0x01 );
+
+// {b9d19a3e-f897-429c-bc46-8138b7272b2d }
+DEFINE_GUID( CODECAPI_AUDIO_ENCODER,
+             0xb9d19a3e, 0xf897, 0x429c, 0xbc, 0x46, 0x81, 0x38, 0xb7, 0x27, 0x2b, 0x2d );
+
+// {6c5e6a7c-acf8-4f55-a999-1a628109051b }
+DEFINE_GUID( CODECAPI_SETALLDEFAULTS,
+             0x6c5e6a7c, 0xacf8, 0x4f55, 0xa9, 0x99, 0x1a, 0x62, 0x81, 0x09, 0x05, 0x1b );
+
+// {6a577e92-83e1-4113-adc2-4fcec32f83a1 }
+DEFINE_GUID( CODECAPI_ALLSETTINGS,
+             0x6a577e92, 0x83e1, 0x4113, 0xad, 0xc2, 0x4f, 0xce, 0xc3, 0x2f, 0x83, 0xa1 );
+
+// {0581af97-7693-4dbd-9dca-3f9ebd6585a1 }
+DEFINE_GUID( CODECAPI_SUPPORTSEVENTS,
+             0x0581af97, 0x7693, 0x4dbd, 0x9d, 0xca, 0x3f, 0x9e, 0xbd, 0x65, 0x85, 0xa1 );
+
+// {1cb14e83-7d72-4657-83fd-47a2c5b9d13d }
+DEFINE_GUID( CODECAPI_CURRENTCHANGELIST,
+             0x1cb14e83, 0x7d72, 0x4657, 0x83, 0xfd, 0x47, 0xa2, 0xc5, 0xb9, 0xd1, 0x3d );
+
+// {1f26a602-2b5c-4b63-b8e8-9ea5c1a7dc2e}
+DEFINE_GUID( CLSID_SBE2MediaTypeProfile,
+             0x1f26a602, 0x2b5c, 0x4b63, 0xb8, 0xe8, 0x9e, 0xa5, 0xc1, 0xa7, 0xdc, 0x2e );
+
+// {3E458037-0CA6-41aa-A594-2AA6C02D709B}
+DEFINE_GUID( CLSID_SBE2FileScan,
+             0x3e458037, 0xca6, 0x41aa, 0xa5, 0x94, 0x2a, 0xa6, 0xc0, 0x2d, 0x70, 0x9b );
+
+DEFINE_GUID( SID_DRMSecureServiceChannel,
+             0xC4C4C4C4, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C481-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( CLSID_ETFilterEncProperties,
+             0xC4C4C481, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C491-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( CLSID_ETFilterTagProperties,
+             0xC4C4C491, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {9CD31617-B303-4f96-8330-2EB173EA4DC6}
+DEFINE_GUID( CLSID_PTFilter,
+             0x9cd31617, 0xb303, 0x4f96, 0x83, 0x30, 0x2e, 0xb1, 0x73, 0xea, 0x4d, 0xc6 );
+// {C4C4C482-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( CLSID_DTFilterEncProperties,
+             0xC4C4C482, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C492-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( CLSID_DTFilterTagProperties,
+             0xC4C4C492, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C483-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( CLSID_XDSCodecProperties,
+             0xC4C4C483, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C493-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( CLSID_XDSCodecTagProperties,
+             0xC4C4C493, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4FC-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( CLSID_CPCAFiltersCategory,
+             0xC4C4C4FC, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4E0-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_XDSCodecNewXDSRating,
+             0xC4C4C4E0, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4DF-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_XDSCodecDuplicateXDSRating,
+             0xC4C4C4DF, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4E1-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_XDSCodecNewXDSPacket,
+             0xC4C4C4E1, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4E2-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_DTFilterRatingChange,
+             0xC4C4C4E2, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4E3-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_DTFilterRatingsBlock,
+             0xC4C4C4E3, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4E4-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_DTFilterRatingsUnblock,
+             0xC4C4C4E4, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4E5-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_DTFilterXDSPacket,
+             0xC4C4C4E5, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4E6-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_ETFilterEncryptionOn,
+             0xC4C4C4E6, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4E7-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_ETFilterEncryptionOff,
+             0xC4C4C4E7, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4E8-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_DTFilterCOPPUnblock,
+             0xC4C4C4E8, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4E9-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_EncDecFilterError,
+             0xC4C4C4E9, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4EA-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_DTFilterCOPPBlock,
+             0xC4C4C4EA, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4EB-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_ETFilterCopyOnce,
+             0xC4C4C4EB, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4F0-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_ETFilterCopyNever,
+             0xC4C4C4F0, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4EC-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_DTFilterDataFormatOK,
+             0xC4C4C4EC, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4ED-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_DTFilterDataFormatFailure,
+             0xC4C4C4ED, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4EE-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_ETDTFilterLicenseOK,
+             0xC4C4C4EE, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4EF-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( EVENTID_ETDTFilterLicenseFailure,
+             0xC4C4C4EF, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4D0-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( MEDIASUBTYPE_ETDTFilter_Tagged,
+             0xC4C4C4D0, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {C4C4C4D1-0049-4E2B-98FB-9537F6CE516D}
+DEFINE_GUID( FORMATTYPE_ETDTFilter_Tagged,
+             0xC4C4C4D1, 0x0049, 0x4E2B, 0x98, 0xFB, 0x95, 0x37, 0xF6, 0xCE, 0x51, 0x6D );
+// {46adbd28-6fd0-4796-93b2-155c51dc048d}
+DEFINE_GUID( MEDIASUBTYPE_CPFilters_Processed, 0x46adbd28, 0x6fd0, 0x4796, 0x93, 0xb2, 0x15, 0x5c, 0x51, 0xdc, 0x4, 0x8d );
+// {6739b36f-1d5f-4ac2-8192-28bb0e73d16a}
+DEFINE_GUID( FORMATTYPE_CPFilters_Processed, 0x6739b36f, 0x1d5f, 0x4ac2, 0x81, 0x92, 0x28, 0xbb, 0xe, 0x73, 0xd1, 0x6a );
+// {4A1B465B-0FB9-4159-AFBD-E33006A0F9F4}
+DEFINE_GUID( EVENTID_EncDecFilterEvent,
+             0x4a1b465b, 0xfb9, 0x4159, 0xaf, 0xbd, 0xe3, 0x30, 0x6, 0xa0, 0xf9, 0xf4 );
+
+//DEFINE_GUID( MFPKEY_SourceOpenMonitor , 
+             //0x074d4637, 0xb5ae, 0x465d, 0xaf, 0x17, 0x1a, 0x53, 0x8d, 0x28, 0x59, 0xdd, 0x02 );
+
+DEFINE_GUID( MEDIASUBTYPE_Y41T, 0x54313459, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_Y42T, 0x54323459, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_V216, 0x36313256, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_V410, 0x30313456, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_v210, 0x30313276, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_I420, 0x30323449, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_WVC1, 0x31435657, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_wvc1, 0x31637677, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_WMVA, 0x41564D57, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_wmva, 0x61766D77, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_WMVB, 0x42564D57, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_wmvb, 0x62766D77, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_WMVR, 0x52564D57, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_wmvr, 0x72766D77, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_WMVP, 0x50564D57, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_wmvp, 0x70766D77, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_WVP2, 0x32505657, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_wvp2, 0x32707677, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_WMV3, 0x33564D57, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_wmv3, 0x33766D77, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_WMV2, 0x32564D57, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_wmv2, 0x32766D77, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_WMV1, 0x31564D57, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_wmv1, 0x31766D77, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_MPG4, 0x3447504D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_mpg4, 0x3467706D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_MP42, 0x3234504D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_mp42, 0x3234706D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_MP43, 0x3334504D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_mp43, 0x3334706D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_MP4S, 0x5334504D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_mp4s, 0x7334706D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_M4S2, 0x3253344D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_m4s2, 0x3273346D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_MSS1, 0x3153534D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_MSS2, 0x3253534D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_MSAUDIO1, 0x00000160, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_WMAUDIO2, 0x00000161, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_WMAUDIO3, 0x00000162, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_WMAUDIO_LOSSLESS, 0x00000163, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_WMASPDIF, 0x00000164, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_WMAUDIO4, 0x00000168, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_MPEG_ADTS_AAC, 0x00001600, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_MPEG_RAW_AAC, 0x00001601, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_MPEG_LOAS, 0x00001602, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_NOKIA_MPEG_ADTS_AAC, 0x00001608, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_NOKIA_MPEG_RAW_AAC, 0x00001609, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_VODAFONE_MPEG_ADTS_AAC, 0x0000160A, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_VODAFONE_MPEG_RAW_AAC, 0x0000160B, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_MPEG_HEAAC, 0x00001610, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_RAW_AAC1, 0x000000FF, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_DVM, 0x00002000, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_DTS2, 0x00002001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_DOLBY_DDPLUS, 0xa7fb87af, 0x2d02, 0x42fb, 0xa4, 0xd4, 0x5, 0xcd, 0x93, 0x84, 0x3b, 0xdd );
+DEFINE_GUID( MEDIASUBTYPE_DOLBY_TRUEHD, 0xeb27cec4, 0x163e, 0x4ca3, 0x8b, 0x74, 0x8e, 0x25, 0xf9, 0x1b, 0x51, 0x7e );
+DEFINE_GUID( MEDIASUBTYPE_DTS_HD, 0xa2e58eb7, 0xfa9, 0x48bb, 0xa4, 0xc, 0xfa, 0xe, 0x15, 0x6d, 0x6, 0x45 );
+DEFINE_GUID( MEDIASUBTYPE_h264, 0x34363268, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_AVC1, 0x31435641, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_X264, 0x34363258, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+DEFINE_GUID( MEDIASUBTYPE_x264, 0x34363278, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+EXTERN_GUID( MF_PD_PMPHOST_CONTEXT, 0x6c990d31, 0xbb8e, 0x477a, 0x85, 0x98, 0xd, 0x5d, 0x96, 0xfc, 0xd8, 0x8a );
+EXTERN_GUID( MF_PD_APP_CONTEXT, 0x6c990d32, 0xbb8e, 0x477a, 0x85, 0x98, 0xd, 0x5d, 0x96, 0xfc, 0xd8, 0x8a );
+
+EXTERN_GUID( MF_PD_ASF_FILEPROPERTIES_FILE_ID, 0x3de649b4, 0xd76d, 0x4e66, 0x9e, 0xc9, 0x78, 0x12, 0xf, 0xb4, 0xc7, 0xe3 );
+EXTERN_GUID( MF_PD_ASF_FILEPROPERTIES_CREATION_TIME, 0x3de649b6, 0xd76d, 0x4e66, 0x9e, 0xc9, 0x78, 0x12, 0xf, 0xb4, 0xc7, 0xe3 );
+EXTERN_GUID( MF_PD_ASF_FILEPROPERTIES_PACKETS, 0x3de649b7, 0xd76d, 0x4e66, 0x9e, 0xc9, 0x78, 0x12, 0xf, 0xb4, 0xc7, 0xe3 );
+EXTERN_GUID( MF_PD_ASF_FILEPROPERTIES_PLAY_DURATION, 0x3de649b8, 0xd76d, 0x4e66, 0x9e, 0xc9, 0x78, 0x12, 0xf, 0xb4, 0xc7, 0xe3 );
+EXTERN_GUID( MF_PD_ASF_FILEPROPERTIES_SEND_DURATION, 0x3de649b9, 0xd76d, 0x4e66, 0x9e, 0xc9, 0x78, 0x12, 0xf, 0xb4, 0xc7, 0xe3 );
+EXTERN_GUID( MF_PD_ASF_FILEPROPERTIES_PREROLL, 0x3de649ba, 0xd76d, 0x4e66, 0x9e, 0xc9, 0x78, 0x12, 0xf, 0xb4, 0xc7, 0xe3 );
+EXTERN_GUID( MF_PD_ASF_FILEPROPERTIES_FLAGS, 0x3de649bb, 0xd76d, 0x4e66, 0x9e, 0xc9, 0x78, 0x12, 0xf, 0xb4, 0xc7, 0xe3 );
+EXTERN_GUID( MF_PD_ASF_FILEPROPERTIES_MIN_PACKET_SIZE, 0x3de649bc, 0xd76d, 0x4e66, 0x9e, 0xc9, 0x78, 0x12, 0xf, 0xb4, 0xc7, 0xe3 );
+EXTERN_GUID( MF_PD_ASF_FILEPROPERTIES_MAX_PACKET_SIZE, 0x3de649bd, 0xd76d, 0x4e66, 0x9e, 0xc9, 0x78, 0x12, 0xf, 0xb4, 0xc7, 0xe3 );
+EXTERN_GUID( MF_PD_ASF_FILEPROPERTIES_MAX_BITRATE, 0x3de649be, 0xd76d, 0x4e66, 0x9e, 0xc9, 0x78, 0x12, 0xf, 0xb4, 0xc7, 0xe3 );
+EXTERN_GUID( CLSID_WMDRMSystemID, 0x8948BB22, 0x11BD, 0x4796, 0x93, 0xE3, 0x97, 0x4D, 0x1B, 0x57, 0x56, 0x78 );
+EXTERN_GUID( MF_PD_ASF_CONTENTENCRYPTION_TYPE, 0x8520fe3d, 0x277e, 0x46ea, 0x99, 0xe4, 0xe3, 0xa, 0x86, 0xdb, 0x12, 0xbe );
+EXTERN_GUID( MF_PD_ASF_CONTENTENCRYPTION_KEYID, 0x8520fe3e, 0x277e, 0x46ea, 0x99, 0xe4, 0xe3, 0xa, 0x86, 0xdb, 0x12, 0xbe );
+EXTERN_GUID( MF_PD_ASF_CONTENTENCRYPTION_SECRET_DATA, 0x8520fe3f, 0x277e, 0x46ea, 0x99, 0xe4, 0xe3, 0xa, 0x86, 0xdb, 0x12, 0xbe );
+EXTERN_GUID( MF_PD_ASF_CONTENTENCRYPTION_LICENSE_URL, 0x8520fe40, 0x277e, 0x46ea, 0x99, 0xe4, 0xe3, 0xa, 0x86, 0xdb, 0x12, 0xbe );
+EXTERN_GUID( MF_PD_ASF_CONTENTENCRYPTIONEX_ENCRYPTION_DATA, 0x62508be5, 0xecdf, 0x4924, 0xa3, 0x59, 0x72, 0xba, 0xb3, 0x39, 0x7b, 0x9d );
+EXTERN_GUID( MF_PD_ASF_LANGLIST, 0xf23de43c, 0x9977, 0x460d, 0xa6, 0xec, 0x32, 0x93, 0x7f, 0x16, 0xf, 0x7d );
+
+EXTERN_GUID( MF_PD_ASF_LANGLIST_LEGACYORDER, 0xf23de43d, 0x9977, 0x460d, 0xa6, 0xec, 0x32, 0x93, 0x7f, 0x16, 0xf, 0x7d );
+
+EXTERN_GUID( MF_PD_ASF_MARKER, 0x5134330e, 0x83a6, 0x475e, 0xa9, 0xd5, 0x4f, 0xb8, 0x75, 0xfb, 0x2e, 0x31 );
+EXTERN_GUID( MF_PD_ASF_SCRIPT, 0xe29cd0d7, 0xd602, 0x4923, 0xa7, 0xfe, 0x73, 0xfd, 0x97, 0xec, 0xc6, 0x50 );
+EXTERN_GUID( MF_PD_ASF_CODECLIST, 0xe4bb3509, 0xc18d, 0x4df1, 0xbb, 0x99, 0x7a, 0x36, 0xb3, 0xcc, 0x41, 0x19 );
+EXTERN_GUID( MF_PD_ASF_METADATA_IS_VBR, 0x5fc6947a, 0xef60, 0x445d, 0xb4, 0x49, 0x44, 0x2e, 0xcc, 0x78, 0xb4, 0xc1 );
+EXTERN_GUID( MF_PD_ASF_METADATA_V8_VBRPEAK, 0x5fc6947b, 0xef60, 0x445d, 0xb4, 0x49, 0x44, 0x2e, 0xcc, 0x78, 0xb4, 0xc1 );
+EXTERN_GUID( MF_PD_ASF_METADATA_V8_BUFFERAVERAGE, 0x5fc6947c, 0xef60, 0x445d, 0xb4, 0x49, 0x44, 0x2e, 0xcc, 0x78, 0xb4, 0xc1 );
+EXTERN_GUID( MF_PD_ASF_METADATA_LEAKY_BUCKET_PAIRS, 0x5fc6947d, 0xef60, 0x445d, 0xb4, 0x49, 0x44, 0x2e, 0xcc, 0x78, 0xb4, 0xc1 );
+EXTERN_GUID( MF_PD_ASF_DATA_START_OFFSET, 0xe7d5b3e7, 0x1f29, 0x45d3, 0x88, 0x22, 0x3e, 0x78, 0xfa, 0xe2, 0x72, 0xed );
+EXTERN_GUID( MF_PD_ASF_DATA_LENGTH, 0xe7d5b3e8, 0x1f29, 0x45d3, 0x88, 0x22, 0x3e, 0x78, 0xfa, 0xe2, 0x72, 0xed );
+EXTERN_GUID( MF_SD_ASF_EXTSTRMPROP_LANGUAGE_ID_INDEX, 0x48f8a522, 0x305d, 0x422d, 0x85, 0x24, 0x25, 0x2, 0xdd, 0xa3, 0x36, 0x80 );
+EXTERN_GUID( MF_SD_ASF_EXTSTRMPROP_AVG_DATA_BITRATE, 0x48f8a523, 0x305d, 0x422d, 0x85, 0x24, 0x25, 0x2, 0xdd, 0xa3, 0x36, 0x80 );
+EXTERN_GUID( MF_SD_ASF_EXTSTRMPROP_AVG_BUFFERSIZE, 0x48f8a524, 0x305d, 0x422d, 0x85, 0x24, 0x25, 0x2, 0xdd, 0xa3, 0x36, 0x80 );
+EXTERN_GUID( MF_SD_ASF_EXTSTRMPROP_MAX_DATA_BITRATE, 0x48f8a525, 0x305d, 0x422d, 0x85, 0x24, 0x25, 0x2, 0xdd, 0xa3, 0x36, 0x80 );
+EXTERN_GUID( MF_SD_ASF_EXTSTRMPROP_MAX_BUFFERSIZE, 0x48f8a526, 0x305d, 0x422d, 0x85, 0x24, 0x25, 0x2, 0xdd, 0xa3, 0x36, 0x80 );
+EXTERN_GUID( MF_SD_ASF_STREAMBITRATES_BITRATE, 0xa8e182ed, 0xafc8, 0x43d0, 0xb0, 0xd1, 0xf6, 0x5b, 0xad, 0x9d, 0xa5, 0x58 );
+EXTERN_GUID( MF_SD_ASF_METADATA_DEVICE_CONFORMANCE_TEMPLATE, 0x245e929d, 0xc44e, 0x4f7e, 0xbb, 0x3c, 0x77, 0xd4, 0xdf, 0xd2, 0x7f, 0x8a );
+EXTERN_GUID( MF_PD_ASF_INFO_HAS_AUDIO, 0x80e62295, 0x2296, 0x4a44, 0xb3, 0x1c, 0xd1, 0x3, 0xc6, 0xfe, 0xd2, 0x3c );
+EXTERN_GUID( MF_PD_ASF_INFO_HAS_VIDEO, 0x80e62296, 0x2296, 0x4a44, 0xb3, 0x1c, 0xd1, 0x3, 0xc6, 0xfe, 0xd2, 0x3c );
+EXTERN_GUID( MF_PD_ASF_INFO_HAS_NON_AUDIO_VIDEO, 0x80e62297, 0x2296, 0x4a44, 0xb3, 0x1c, 0xd1, 0x3, 0xc6, 0xfe, 0xd2, 0x3c );
+EXTERN_GUID( MF_ASFPROFILE_MINPACKETSIZE, 0x22587626, 0x47de, 0x4168, 0x87, 0xf5, 0xb5, 0xaa, 0x9b, 0x12, 0xa8, 0xf0 );
+EXTERN_GUID( MF_ASFPROFILE_MAXPACKETSIZE, 0x22587627, 0x47de, 0x4168, 0x87, 0xf5, 0xb5, 0xaa, 0x9b, 0x12, 0xa8, 0xf0 );
+EXTERN_GUID( MF_ASFSTREAMCONFIG_LEAKYBUCKET1, 0xc69b5901, 0xea1a, 0x4c9b, 0xb6, 0x92, 0xe2, 0xa0, 0xd2, 0x9a, 0x8a, 0xdd );
+EXTERN_GUID( MF_ASFSTREAMCONFIG_LEAKYBUCKET2, 0xc69b5902, 0xea1a, 0x4c9b, 0xb6, 0x92, 0xe2, 0xa0, 0xd2, 0x9a, 0x8a, 0xdd );
+EXTERN_GUID( MFASFSampleExtension_SampleDuration, 0xc6bd9450, 0x867f, 0x4907, 0x83, 0xa3, 0xc7, 0x79, 0x21, 0xb7, 0x33, 0xad );
+EXTERN_GUID( MFASFSampleExtension_OutputCleanPoint, 0xf72a3c6f, 0x6eb4, 0x4ebc, 0xb1, 0x92, 0x9, 0xad, 0x97, 0x59, 0xe8, 0x28 );
+EXTERN_GUID( MFASFSampleExtension_SMPTE, 0x399595ec, 0x8667, 0x4e2d, 0x8f, 0xdb, 0x98, 0x81, 0x4c, 0xe7, 0x6c, 0x1e );
+EXTERN_GUID( MFASFSampleExtension_FileName, 0xe165ec0e, 0x19ed, 0x45d7, 0xb4, 0xa7, 0x25, 0xcb, 0xd1, 0xe2, 0x8e, 0x9b );
+EXTERN_GUID( MFASFSampleExtension_ContentType, 0xd590dc20, 0x07bc, 0x436c, 0x9c, 0xf7, 0xf3, 0xbb, 0xfb, 0xf1, 0xa4, 0xdc );
+EXTERN_GUID( MFASFSampleExtension_PixelAspectRatio, 0x1b1ee554, 0xf9ea, 0x4bc8, 0x82, 0x1a, 0x37, 0x6b, 0x74, 0xe4, 0xc4, 0xb8 );
+EXTERN_GUID( MFASFSampleExtension_Encryption_SampleID, 0x6698B84E, 0x0AFA, 0x4330, 0xAE, 0xB2, 0x1C, 0x0A, 0x98, 0xD7, 0xA4, 0x4D );
+EXTERN_GUID( MFASFSampleExtension_Encryption_KeyID, 0x76376591, 0x795f, 0x4da1, 0x86, 0xed, 0x9d, 0x46, 0xec, 0xa1, 0x09, 0xa9 );
+EXTERN_GUID( MFASFMutexType_Language, 0x72178C2B, 0xE45B, 0x11D5, 0xBC, 0x2A, 0x00, 0xB0, 0xD0, 0xF3, 0xF4, 0xAB );
+EXTERN_GUID( MFASFMutexType_Bitrate, 0x72178C2C, 0xE45B, 0x11D5, 0xBC, 0x2A, 0x00, 0xB0, 0xD0, 0xF3, 0xF4, 0xAB );
+EXTERN_GUID( MFASFMutexType_Presentation, 0x72178C2D, 0xE45B, 0x11D5, 0xBC, 0x2A, 0x00, 0xB0, 0xD0, 0xF3, 0xF4, 0xAB );
+EXTERN_GUID( MFASFMutexType_Unknown, 0x72178C2E, 0xE45B, 0x11D5, 0xBC, 0x2A, 0x00, 0xB0, 0xD0, 0xF3, 0xF4, 0xAB );
+
+// {9E6BD6F5-0109-4f95-84AC-9309153A19FC}   MF_MT_ARBITRARY_HEADER          {MT_ARBITRARY_HEADER}
+DEFINE_GUID( MF_MT_ARBITRARY_HEADER,
+             0x9e6bd6f5, 0x109, 0x4f95, 0x84, 0xac, 0x93, 0x9, 0x15, 0x3a, 0x19, 0xfc );
+// {47537213-8cfb-4722-aa34-fbc9e24d77b8}   MF_MT_CUSTOM_VIDEO_PRIMARIES    {BLOB (MT_CUSTOM_VIDEO_PRIMARIES)}
+DEFINE_GUID( MF_MT_CUSTOM_VIDEO_PRIMARIES,
+             0x47537213, 0x8cfb, 0x4722, 0xaa, 0x34, 0xfb, 0xc9, 0xe2, 0x4d, 0x77, 0xb8 );
+EXTERN_GUID( WMMEDIASUBTYPE_Base,
+             0x00000000, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 73646976-0000-0010-8000-00AA00389B71  'vids' == WMMEDIATYPE_Video 
+EXTERN_GUID( WMMEDIATYPE_Video,
+             0x73646976, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+// e436eb78-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB1 
+EXTERN_GUID( WMMEDIASUBTYPE_RGB1,
+             0xe436eb78, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+// e436eb79-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB4 
+EXTERN_GUID( WMMEDIASUBTYPE_RGB4,
+             0xe436eb79, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+// e436eb7a-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB8 
+EXTERN_GUID( WMMEDIASUBTYPE_RGB8,
+             0xe436eb7a, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+// e436eb7b-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB565 
+EXTERN_GUID( WMMEDIASUBTYPE_RGB565,
+             0xe436eb7b, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+// e436eb7c-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB555 
+EXTERN_GUID( WMMEDIASUBTYPE_RGB555,
+             0xe436eb7c, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+// e436eb7d-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB24 
+EXTERN_GUID( WMMEDIASUBTYPE_RGB24,
+             0xe436eb7d, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+// e436eb7e-524f-11ce-9f53-0020af0ba770            MEDIASUBTYPE_RGB32 
+EXTERN_GUID( WMMEDIASUBTYPE_RGB32,
+             0xe436eb7e, 0x524f, 0x11ce, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70 );
+// 30323449-0000-0010-8000-00AA00389B71  'I420' ==  MEDIASUBTYPE_I420 
+EXTERN_GUID( WMMEDIASUBTYPE_I420,
+             0x30323449, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+// 56555949-0000-0010-8000-00AA00389B71  'IYUV' ==  MEDIASUBTYPE_IYUV 
+EXTERN_GUID( WMMEDIASUBTYPE_IYUV,
+             0x56555949, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+// 32315659-0000-0010-8000-00AA00389B71  'YV12' ==  MEDIASUBTYPE_YV12 
+EXTERN_GUID( WMMEDIASUBTYPE_YV12,
+             0x32315659, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+// 32595559-0000-0010-8000-00AA00389B71  'YUY2' == MEDIASUBTYPE_YUY2 
+EXTERN_GUID( WMMEDIASUBTYPE_YUY2,
+             0x32595559, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+// 32323450-0000-0010-8000-00AA00389B71  'P422' == MEDIASUBTYPE_P422 
+EXTERN_GUID( WMMEDIASUBTYPE_P422,
+             0x32323450, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+// 59565955-0000-0010-8000-00AA00389B71  'UYVY' ==  MEDIASUBTYPE_UYVY 
+EXTERN_GUID( WMMEDIASUBTYPE_UYVY,
+             0x59565955, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+// 55595659-0000-0010-8000-00AA00389B71  'YVYU' == MEDIASUBTYPE_YVYU 
+EXTERN_GUID( WMMEDIASUBTYPE_YVYU,
+             0x55595659, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+// 39555659-0000-0010-8000-00AA00389B71  'YVU9' == MEDIASUBTYPE_YVU9 
+EXTERN_GUID( WMMEDIASUBTYPE_YVU9,
+             0x39555659, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+// 1d4a45f2-e5f6-4b44-8388-f0ae5c0e0c37            MEDIASUBTYPE_VIDEOIMAGE 
+EXTERN_GUID( WMMEDIASUBTYPE_VIDEOIMAGE,
+             0x1d4a45f2, 0xe5f6, 0x4b44, 0x83, 0x88, 0xf0, 0xae, 0x5c, 0x0e, 0x0c, 0x37 );
+// 3334504D-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_MP43 
+EXTERN_GUID( WMMEDIASUBTYPE_MP43,
+             0x3334504D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 5334504D-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_MP4S 
+EXTERN_GUID( WMMEDIASUBTYPE_MP4S,
+             0x5334504D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 3253344D-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_M4S2 
+EXTERN_GUID( WMMEDIASUBTYPE_M4S2,
+             0x3253344D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 31564D57-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_WMV1 
+EXTERN_GUID( WMMEDIASUBTYPE_WMV1,
+             0x31564D57, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 32564D57-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_WMV2 
+EXTERN_GUID( WMMEDIASUBTYPE_WMV2,
+             0x32564D57, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 3153534D-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_MSS1 
+EXTERN_GUID( WMMEDIASUBTYPE_MSS1,
+             0x3153534D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// E06D8026-DB46-11CF-B4D1-00805F6CBBEA            WMMEDIASUBTYPE_MPEG2_VIDEO 
+EXTERN_GUID( WMMEDIASUBTYPE_MPEG2_VIDEO,
+             0xe06d8026, 0xdb46, 0x11cf, 0xb4, 0xd1, 0x00, 0x80, 0x5f, 0x6c, 0xbb, 0xea );
+// 73647561-0000-0010-8000-00AA00389B71  'auds' == WMMEDIATYPE_Audio 
+EXTERN_GUID( WMMEDIATYPE_Audio,
+             0x73647561, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+// 00000001-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_PCM 
+EXTERN_GUID( WMMEDIASUBTYPE_PCM,
+             0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 00000009-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_DRM 
+EXTERN_GUID( WMMEDIASUBTYPE_DRM,
+             0x00000009, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 00000162-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_WMAudioV9 
+EXTERN_GUID( WMMEDIASUBTYPE_WMAudioV9,
+             0x00000162, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 00000163-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_WMAudio_Lossless 
+EXTERN_GUID( WMMEDIASUBTYPE_WMAudio_Lossless,
+             0x00000163, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 3253534D-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_MSS2 
+EXTERN_GUID( WMMEDIASUBTYPE_MSS2,
+             0x3253534D, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 0000000A-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_WMSP1 
+EXTERN_GUID( WMMEDIASUBTYPE_WMSP1,
+             0x0000000A, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 0000000B-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_WMSP2 
+EXTERN_GUID( WMMEDIASUBTYPE_WMSP2,
+             0x0000000B, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 33564D57-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_WMV3 
+EXTERN_GUID( WMMEDIASUBTYPE_WMV3,
+             0x33564D57, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 50564D57-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_WMVP 
+EXTERN_GUID( WMMEDIASUBTYPE_WMVP,
+             0x50564D57, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 32505657-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_WVP2 
+EXTERN_GUID( WMMEDIASUBTYPE_WVP2,
+             0x32505657, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 41564D57-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_WMVA 
+EXTERN_GUID( WMMEDIASUBTYPE_WMVA,
+             0x41564D57, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 31435657-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_WVC1 
+EXTERN_GUID( WMMEDIASUBTYPE_WVC1,
+             0x31435657, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 00000161-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_WMAudioV8 
+EXTERN_GUID( WMMEDIASUBTYPE_WMAudioV8,
+             0x00000161, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 00000161-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_WMAudioV7 
+EXTERN_GUID( WMMEDIASUBTYPE_WMAudioV7,
+             0x00000161, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 00000161-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_WMAudioV2 
+EXTERN_GUID( WMMEDIASUBTYPE_WMAudioV2,
+             0x00000161, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 00000130-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_ACELPnet 
+EXTERN_GUID( WMMEDIASUBTYPE_ACELPnet,
+             0x00000130, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 00000055-0000-0010-8000-00AA00389B71            WMMEDIASUBTYPE_MP3 
+EXTERN_GUID( WMMEDIASUBTYPE_MP3,
+             0x00000055, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 );
+// 776257D4-C627-41CB-8F81-7AC7FF1C40CC            WMMEDIASUBTYPE_WebStream 
+EXTERN_GUID( WMMEDIASUBTYPE_WebStream,
+             0x776257d4, 0xc627, 0x41cb, 0x8f, 0x81, 0x7a, 0xc7, 0xff, 0x1c, 0x40, 0xcc );
+// 73636d64-0000-0010-8000-00AA00389B71  'scmd' == WMMEDIATYPE_Script 
+EXTERN_GUID( WMMEDIATYPE_Script,
+             0x73636d64, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 );
+// 34A50FD8-8AA5-4386-81FE-A0EFE0488E31  'imag' == WMMEDIATYPE_Image 
+EXTERN_GUID( WMMEDIATYPE_Image,
+             0x34a50fd8, 0x8aa5, 0x4386, 0x81, 0xfe, 0xa0, 0xef, 0xe0, 0x48, 0x8e, 0x31 );
+// D9E47579-930E-4427-ADFC-AD80F290E470  'fxfr' == WMMEDIATYPE_FileTransfer 
+EXTERN_GUID( WMMEDIATYPE_FileTransfer,
+             0xd9e47579, 0x930e, 0x4427, 0xad, 0xfc, 0xad, 0x80, 0xf2, 0x90, 0xe4, 0x70 );
+// 9BBA1EA7-5AB2-4829-BA57-0940209BCF3E      'text' == WMMEDIATYPE_Text 
+EXTERN_GUID( WMMEDIATYPE_Text,
+             0x9bba1ea7, 0x5ab2, 0x4829, 0xba, 0x57, 0x9, 0x40, 0x20, 0x9b, 0xcf, 0x3e );
+// 05589F80-C356-11CE-BF01-00AA0055595A        WMFORMAT_VideoInfo 
+EXTERN_GUID( WMFORMAT_VideoInfo,
+             0x05589f80, 0xc356, 0x11ce, 0xbf, 0x01, 0x00, 0xaa, 0x00, 0x55, 0x59, 0x5a );
+// E06D80E3-DB46-11CF-B4D1-00805F6CBBEA        WMFORMAT_MPEG2Video 
+EXTERN_GUID( WMFORMAT_MPEG2Video,
+             0xe06d80e3, 0xdb46, 0x11cf, 0xb4, 0xd1, 0x00, 0x80, 0x05f, 0x6c, 0xbb, 0xea );
+// 05589F81-C356-11CE-BF01-00AA0055595A        WMFORMAT_WaveFormatEx 
+EXTERN_GUID( WMFORMAT_WaveFormatEx,
+             0x05589f81, 0xc356, 0x11ce, 0xbf, 0x01, 0x00, 0xaa, 0x00, 0x55, 0x59, 0x5a );
+// 5C8510F2-DEBE-4CA7-BBA5-F07A104F8DFF        WMFORMAT_Script 
+EXTERN_GUID( WMFORMAT_Script,
+             0x5c8510f2, 0xdebe, 0x4ca7, 0xbb, 0xa5, 0xf0, 0x7a, 0x10, 0x4f, 0x8d, 0xff );
+// DA1E6B13-8359-4050-B398-388E965BF00C        WMFORMAT_WebStream 
+EXTERN_GUID( WMFORMAT_WebStream,
+             0xda1e6b13, 0x8359, 0x4050, 0xb3, 0x98, 0x38, 0x8e, 0x96, 0x5b, 0xf0, 0x0c );
+// 82F38A70-C29F-11D1-97AD-00A0C95EA850        WMSCRIPTTYPE_TwoStrings 
+EXTERN_GUID( WMSCRIPTTYPE_TwoStrings,
+             0x82f38a70, 0xc29f, 0x11d1, 0x97, 0xad, 0x00, 0xa0, 0xc9, 0x5e, 0xa8, 0x50 );
+EXTERN_GUID( WM_SampleExtensionGUID_OutputCleanPoint, 0xf72a3c6f, 0x6eb4, 0x4ebc, 0xb1, 0x92, 0x9, 0xad, 0x97, 0x59, 0xe8, 0x28 );
+EXTERN_GUID( WM_SampleExtensionGUID_Timecode, 0x399595ec, 0x8667, 0x4e2d, 0x8f, 0xdb, 0x98, 0x81, 0x4c, 0xe7, 0x6c, 0x1e );
+EXTERN_GUID( WM_SampleExtensionGUID_ChromaLocation, 0x4c5acca0, 0x9276, 0x4b2c, 0x9e, 0x4c, 0xa0, 0xed, 0xef, 0xdd, 0x21, 0x7e );
+EXTERN_GUID( WM_SampleExtensionGUID_ColorSpaceInfo, 0xf79ada56, 0x30eb, 0x4f2b, 0x9f, 0x7a, 0xf2, 0x4b, 0x13, 0x9a, 0x11, 0x57 );
+EXTERN_GUID( WM_SampleExtensionGUID_UserDataInfo, 0x732bb4fa, 0x78be, 0x4549, 0x99, 0xbd, 0x2, 0xdb, 0x1a, 0x55, 0xb7, 0xa8 );
+EXTERN_GUID( WM_SampleExtensionGUID_FileName, 0xe165ec0e, 0x19ed, 0x45d7, 0xb4, 0xa7, 0x25, 0xcb, 0xd1, 0xe2, 0x8e, 0x9b );
+EXTERN_GUID( WM_SampleExtensionGUID_ContentType, 0xd590dc20, 0x07bc, 0x436c, 0x9c, 0xf7, 0xf3, 0xbb, 0xfb, 0xf1, 0xa4, 0xdc );
+EXTERN_GUID( WM_SampleExtensionGUID_PixelAspectRatio, 0x1b1ee554, 0xf9ea, 0x4bc8, 0x82, 0x1a, 0x37, 0x6b, 0x74, 0xe4, 0xc4, 0xb8 );
+EXTERN_GUID( WM_SampleExtensionGUID_SampleDuration, 0xc6bd9450, 0x867f, 0x4907, 0x83, 0xa3, 0xc7, 0x79, 0x21, 0xb7, 0x33, 0xad );
+EXTERN_GUID( WM_SampleExtensionGUID_SampleProtectionSalt, 0x5403deee, 0xb9ee, 0x438f, 0xaa, 0x83, 0x38, 0x4, 0x99, 0x7e, 0x56, 0x9d );
+#undef INITGUID
+#endif
+
+static struct tag_KnownGUID {
+  GUID guid;
+  LPCWSTR lpstrName;
+} known_guids[] =
+{
+  // From mfapi.h
+  { MFVideoFormat_Base, L"MFVideoFormat_Base" },
+  { MFVideoFormat_RGB32, L"MFVideoFormat_RGB32" },
+  { MFVideoFormat_ARGB32, L"MFVideoFormat_ARGB32" },
+  { MFVideoFormat_RGB24, L"MFVideoFormat_RGB24" },
+  { MFVideoFormat_RGB555, L"MFVideoFormat_RGB555" },
+  { MFVideoFormat_RGB565, L"MFVideoFormat_RGB565" },
+  { MFVideoFormat_AI44, L"MFVideoFormat_AI44" },
+  { MFVideoFormat_AYUV, L"MFVideoFormat_AYUV" },
+  { MFVideoFormat_YUY2, L"MFVideoFormat_YUY2" },
+  { MFVideoFormat_YVYU, L"MFVideoFormat_YVYU" },
+  { MFVideoFormat_NV11, L"MFVideoFormat_NV11" },
+  { MFVideoFormat_NV12, L"MFVideoFormat_NV12" },
+  { MFVideoFormat_YV12, L"MFVideoFormat_YV12" },
+  { MFVideoFormat_I420, L"MFVideoFormat_I420" },
+  { MFVideoFormat_IYUV, L"MFVideoFormat_IYUV" },
+  { MFVideoFormat_Y210, L"MFVideoFormat_Y210" },
+  { MFVideoFormat_Y216, L"MFVideoFormat_Y216" },
+  { MFVideoFormat_Y410, L"MFVideoFormat_Y410" },
+  { MFVideoFormat_Y416, L"MFVideoFormat_Y416" },
+  { MFVideoFormat_Y41P, L"MFVideoFormat_Y41P" },
+  { MFVideoFormat_Y41T, L"MFVideoFormat_Y41T" },
+  { MFVideoFormat_Y42T, L"MFVideoFormat_Y42T" },
+  { MFVideoFormat_P210, L"MFVideoFormat_P210" },
+  { MFVideoFormat_P216, L"MFVideoFormat_P216" },
+  { MFVideoFormat_P010, L"MFVideoFormat_P010" },
+  { MFVideoFormat_P016, L"MFVideoFormat_P016" },
+  { MFVideoFormat_v210, L"MFVideoFormat_v210" },
+  { MFVideoFormat_v216, L"MFVideoFormat_v216" },
+  { MFVideoFormat_v410, L"MFVideoFormat_v410" },
+  { MFVideoFormat_MP43, L"MFVideoFormat_MP43" },
+  { MFVideoFormat_MP4S, L"MFVideoFormat_MP4S" },
+  { MFVideoFormat_M4S2, L"MFVideoFormat_M4S2" },
+  { MFVideoFormat_MP4V, L"MFVideoFormat_MP4V" },
+  { MFVideoFormat_WMV1, L"MFVideoFormat_WMV1" },
+  { MFVideoFormat_WMV2, L"MFVideoFormat_WMV2" },
+  { MFVideoFormat_WMV3, L"MFVideoFormat_WMV3" },
+  { MFVideoFormat_WVC1, L"MFVideoFormat_WVC1" },
+  { MFVideoFormat_MSS1, L"MFVideoFormat_MSS1" },
+  { MFVideoFormat_MSS2, L"MFVideoFormat_MSS2" },
+  { MFVideoFormat_MPG1, L"MFVideoFormat_MPG1" },
+  { MFVideoFormat_DVSL, L"MFVideoFormat_DVSL" },
+  { MFVideoFormat_DVSD, L"MFVideoFormat_DVSD" },
+  { MFVideoFormat_DV25, L"MFVideoFormat_DV25" },
+  { MFVideoFormat_DV50, L"MFVideoFormat_DV50" },
+  { MFVideoFormat_DVH1, L"MFVideoFormat_DVH1" },
+  { MFVideoFormat_DVC, L"MFVideoFormat_DVC" },
+  { MFVideoFormat_H264, L"MFVideoFormat_H264" },
+  { MFVideoFormat_MJPG, L"MFVideoFormat_MJPG" },
+  { MFVideoFormat_MPEG2, L"MFVideoFormat_MPEG2" },
+  { MFAudioFormat_Base, L"MFAudioFormat_Base" },
+  { MFAudioFormat_PCM, L"MFAudioFormat_PCM" },
+  { MFAudioFormat_Float, L"MFAudioFormat_Float" },
+  { MFAudioFormat_DTS, L"MFAudioFormat_DTS" },
+  { MFAudioFormat_Dolby_AC3_SPDIF, L"MFAudioFormat_Dolby_AC3_SPDIF" },
+  { MFAudioFormat_DRM, L"MFAudioFormat_DRM" },
+  { MFAudioFormat_WMAudioV8, L"MFAudioFormat_WMAudioV8" },
+  { MFAudioFormat_WMAudioV9, L"MFAudioFormat_WMAudioV9" },
+  { MFAudioFormat_WMAudio_Lossless, L"MFAudioFormat_WMAudio_Lossless" },
+  { MFAudioFormat_WMASPDIF, L"MFAudioFormat_WMASPDIF" },
+  { MFAudioFormat_MSP1, L"MFAudioFormat_MSP1" },
+  { MFAudioFormat_MP3, L"MFAudioFormat_MP3" },
+  { MFAudioFormat_MPEG, L"MFAudioFormat_MPEG" },
+  { MFAudioFormat_AAC, L"MFAudioFormat_AAC" },
+  { MFAudioFormat_ADTS, L"MFAudioFormat_ADTS" },
+  { MFMPEG4Format_Base, L"MFMPEG4Format_Base" },
+  { MF_MT_MAJOR_TYPE, L"MF_MT_MAJOR_TYPE" },
+  { MF_MT_SUBTYPE, L"MF_MT_SUBTYPE" },
+  { MF_MT_ALL_SAMPLES_INDEPENDENT, L"MF_MT_ALL_SAMPLES_INDEPENDENT" },
+  { MF_MT_FIXED_SIZE_SAMPLES, L"MF_MT_FIXED_SIZE_SAMPLES" },
+  { MF_MT_COMPRESSED, L"MF_MT_COMPRESSED" },
+  { MF_MT_SAMPLE_SIZE, L"MF_MT_SAMPLE_SIZE" },
+  { MF_MT_WRAPPED_TYPE, L"MF_MT_WRAPPED_TYPE" },
+  { MF_MT_AUDIO_NUM_CHANNELS, L"MF_MT_AUDIO_NUM_CHANNELS" },
+  { MF_MT_AUDIO_SAMPLES_PER_SECOND, L"MF_MT_AUDIO_SAMPLES_PER_SECOND" },
+  { MF_MT_AUDIO_FLOAT_SAMPLES_PER_SECOND, L"MF_MT_AUDIO_FLOAT_SAMPLES_PER_SECOND" },
+  { MF_MT_AUDIO_AVG_BYTES_PER_SECOND, L"MF_MT_AUDIO_AVG_BYTES_PER_SECOND" },
+  { MF_MT_AUDIO_BLOCK_ALIGNMENT, L"MF_MT_AUDIO_BLOCK_ALIGNMENT" },
+  { MF_MT_AUDIO_BITS_PER_SAMPLE, L"MF_MT_AUDIO_BITS_PER_SAMPLE" },
+  { MF_MT_AUDIO_VALID_BITS_PER_SAMPLE, L"MF_MT_AUDIO_VALID_BITS_PER_SAMPLE" },
+  { MF_MT_AUDIO_SAMPLES_PER_BLOCK, L"MF_MT_AUDIO_SAMPLES_PER_BLOCK" },
+  { MF_MT_AUDIO_CHANNEL_MASK, L"MF_MT_AUDIO_CHANNEL_MASK" },
+  { MF_MT_AUDIO_FOLDDOWN_MATRIX, L"MF_MT_AUDIO_FOLDDOWN_MATRIX" },
+  { MF_MT_AUDIO_WMADRC_PEAKREF, L"MF_MT_AUDIO_WMADRC_PEAKREF" },
+  { MF_MT_AUDIO_WMADRC_PEAKTARGET, L"MF_MT_AUDIO_WMADRC_PEAKTARGET" },
+  { MF_MT_AUDIO_WMADRC_AVGREF, L"MF_MT_AUDIO_WMADRC_AVGREF" },
+  { MF_MT_AUDIO_WMADRC_AVGTARGET, L"MF_MT_AUDIO_WMADRC_AVGTARGET" },
+  { MF_MT_AUDIO_PREFER_WAVEFORMATEX, L"MF_MT_AUDIO_PREFER_WAVEFORMATEX" },
+  { MF_MT_AAC_PAYLOAD_TYPE, L"MF_MT_AAC_PAYLOAD_TYPE" },
+  { MF_MT_AAC_AUDIO_PROFILE_LEVEL_INDICATION, L"MF_MT_AAC_AUDIO_PROFILE_LEVEL_INDICATION" },
+  { MF_MT_FRAME_SIZE, L"MF_MT_FRAME_SIZE" },
+  { MF_MT_FRAME_RATE, L"MF_MT_FRAME_RATE" },
+  { MF_MT_PIXEL_ASPECT_RATIO, L"MF_MT_PIXEL_ASPECT_RATIO" },
+  { MF_MT_DRM_FLAGS, L"MF_MT_DRM_FLAGS" },
+  { MF_MT_PAD_CONTROL_FLAGS, L"MF_MT_PAD_CONTROL_FLAGS" },
+  { MF_MT_SOURCE_CONTENT_HINT, L"MF_MT_SOURCE_CONTENT_HINT" },
+  { MF_MT_VIDEO_CHROMA_SITING, L"MF_MT_VIDEO_CHROMA_SITING" },
+  { MF_MT_INTERLACE_MODE, L"MF_MT_INTERLACE_MODE" },
+  { MF_MT_TRANSFER_FUNCTION, L"MF_MT_TRANSFER_FUNCTION" },
+  { MF_MT_VIDEO_PRIMARIES, L"MF_MT_VIDEO_PRIMARIES" },
+  { MF_MT_CUSTOM_VIDEO_PRIMARIES, L"MF_MT_CUSTOM_VIDEO_PRIMARIES" },
+  { MF_MT_YUV_MATRIX, L"MF_MT_YUV_MATRIX" },
+  { MF_MT_VIDEO_LIGHTING, L"MF_MT_VIDEO_LIGHTING" },
+  { MF_MT_VIDEO_NOMINAL_RANGE, L"MF_MT_VIDEO_NOMINAL_RANGE" },
+  { MF_MT_GEOMETRIC_APERTURE, L"MF_MT_GEOMETRIC_APERTURE" },
+  { MF_MT_MINIMUM_DISPLAY_APERTURE, L"MF_MT_MINIMUM_DISPLAY_APERTURE" },
+  { MF_MT_PAN_SCAN_APERTURE, L"MF_MT_PAN_SCAN_APERTURE" },
+  { MF_MT_PAN_SCAN_ENABLED, L"MF_MT_PAN_SCAN_ENABLED" },
+  { MF_MT_AVG_BITRATE, L"MF_MT_AVG_BITRATE" },
+  { MF_MT_AVG_BIT_ERROR_RATE, L"MF_MT_AVG_BIT_ERROR_RATE" },
+  { MF_MT_MAX_KEYFRAME_SPACING, L"MF_MT_MAX_KEYFRAME_SPACING" },
+  { MF_MT_DEFAULT_STRIDE, L"MF_MT_DEFAULT_STRIDE" },
+  { MF_MT_PALETTE, L"MF_MT_PALETTE" },
+  { MF_MT_USER_DATA, L"MF_MT_USER_DATA" },
+  { MF_MT_AM_FORMAT_TYPE, L"MF_MT_AM_FORMAT_TYPE" },
+  { MF_MT_MPEG_START_TIME_CODE, L"MF_MT_MPEG_START_TIME_CODE" },
+  { MF_MT_MPEG2_PROFILE, L"MF_MT_MPEG2_PROFILE" },
+  { MF_MT_MPEG2_LEVEL, L"MF_MT_MPEG2_LEVEL" },
+  { MF_MT_MPEG2_FLAGS, L"MF_MT_MPEG2_FLAGS" },
+  { MF_MT_MPEG_SEQUENCE_HEADER, L"MF_MT_MPEG_SEQUENCE_HEADER" },
+  { MF_MT_DV_AAUX_SRC_PACK_0, L"MF_MT_DV_AAUX_SRC_PACK_0" },
+  { MF_MT_DV_AAUX_CTRL_PACK_0, L"MF_MT_DV_AAUX_CTRL_PACK_0" },
+  { MF_MT_DV_AAUX_SRC_PACK_1, L"MF_MT_DV_AAUX_SRC_PACK_1" },
+  { MF_MT_DV_AAUX_CTRL_PACK_1, L"MF_MT_DV_AAUX_CTRL_PACK_1" },
+  { MF_MT_DV_VAUX_SRC_PACK, L"MF_MT_DV_VAUX_SRC_PACK" },
+  { MF_MT_DV_VAUX_CTRL_PACK, L"MF_MT_DV_VAUX_CTRL_PACK" },
+  { MF_MT_ARBITRARY_HEADER, L"MF_MT_ARBITRARY_HEADER" },
+  { MF_MT_ARBITRARY_FORMAT, L"MF_MT_ARBITRARY_FORMAT" },
+  { MF_MT_IMAGE_LOSS_TOLERANT, L"MF_MT_IMAGE_LOSS_TOLERANT" },
+  { MF_MT_MPEG4_SAMPLE_DESCRIPTION, L"MF_MT_MPEG4_SAMPLE_DESCRIPTION" },
+  { MF_MT_MPEG4_CURRENT_SAMPLE_ENTRY, L"MF_MT_MPEG4_CURRENT_SAMPLE_ENTRY" },
+  { MF_MT_ORIGINAL_4CC, L"MF_MT_ORIGINAL_4CC" },
+  { MF_MT_ORIGINAL_WAVE_FORMAT_TAG, L"MF_MT_ORIGINAL_WAVE_FORMAT_TAG" },
+  { MF_MT_FRAME_RATE_RANGE_MIN, L"MF_MT_FRAME_RATE_RANGE_MIN" },
+  { MF_MT_FRAME_RATE_RANGE_MAX, L"MF_MT_FRAME_RATE_RANGE_MAX" },
+  { MF_MT_DV_VAUX_CTRL_PACK, L"MF_MT_DV_VAUX_CTRL_PACK" },
+  { MFMediaType_Default, L"MFMediaType_Default" },
+  { MFMediaType_Audio, L"MFMediaType_Audio" },
+  { MFMediaType_Video, L"MFMediaType_Video" },
+  { MFMediaType_Protected, L"MFMediaType_Protected" },
+  { MFMediaType_SAMI, L"MFMediaType_SAMI" },
+  { MFMediaType_Script, L"MFMediaType_Script" },
+  { MFMediaType_Image, L"MFMediaType_Image" },
+  { MFMediaType_HTML, L"MFMediaType_HTML" },
+  { MFMediaType_Binary, L"MFMediaType_Binary" },
+  { MFMediaType_FileTransfer, L"MFMediaType_FileTransfer" },
+  { AM_MEDIA_TYPE_REPRESENTATION, L"AM_MEDIA_TYPE_REPRESENTATION" },
+  { FORMAT_MFVideoFormat, L"FORMAT_MFVideoFormat" },
+
+  // From uuids.h
+  { MEDIATYPE_NULL, L"MEDIATYPE_NULL" },
+  { MEDIASUBTYPE_NULL, L"MEDIASUBTYPE_NULL" },
+  { MEDIASUBTYPE_None, L"MEDIASUBTYPE_None" },
+  { MEDIATYPE_Video, L"MEDIATYPE_Video" },
+  { MEDIATYPE_Audio, L"MEDIATYPE_Audio" },
+  { MEDIATYPE_Text, L"MEDIATYPE_Text" },
+  { MEDIATYPE_Midi, L"MEDIATYPE_Midi" },
+  { MEDIATYPE_Stream, L"MEDIATYPE_Stream" },
+  { MEDIATYPE_Interleaved, L"MEDIATYPE_Interleaved" },
+  { MEDIATYPE_File, L"MEDIATYPE_File" },
+  { MEDIATYPE_ScriptCommand, L"MEDIATYPE_ScriptCommand" },
+  { MEDIATYPE_AUXLine21Data, L"MEDIATYPE_AUXLine21Data" },
+  { MEDIATYPE_AUXTeletextPage, L"MEDIATYPE_AUXTeletextPage" },
+  { MEDIATYPE_CC_CONTAINER, L"MEDIATYPE_CC_CONTAINER" },
+  { MEDIATYPE_DTVCCData, L"MEDIATYPE_DTVCCData" },
+  { MEDIATYPE_MSTVCaption, L"MEDIATYPE_MSTVCaption" },
+  { MEDIATYPE_VBI, L"MEDIATYPE_VBI" },
+  { MEDIASUBTYPE_DVB_SUBTITLES, L"MEDIASUBTYPE_DVB_SUBTITLES" },
+  { MEDIASUBTYPE_ISDB_CAPTIONS, L"MEDIASUBTYPE_ISDB_CAPTIONS" },
+  { MEDIASUBTYPE_ISDB_SUPERIMPOSE, L"MEDIASUBTYPE_ISDB_SUPERIMPOSE" },
+  { MEDIATYPE_Timecode, L"MEDIATYPE_Timecode" },
+  { MEDIATYPE_LMRT, L"MEDIATYPE_LMRT" },
+  { MEDIATYPE_URL_STREAM, L"MEDIATYPE_URL_STREAM" },
+  { MEDIASUBTYPE_CLPL, L"MEDIASUBTYPE_CLPL" },
+  { MEDIASUBTYPE_YUYV, L"MEDIASUBTYPE_YUYV" },
+  { MEDIASUBTYPE_IYUV, L"MEDIASUBTYPE_IYUV" },
+  { MEDIASUBTYPE_YVU9, L"MEDIASUBTYPE_YVU9" },
+  { MEDIASUBTYPE_Y411, L"MEDIASUBTYPE_Y411" },
+  { MEDIASUBTYPE_Y41P, L"MEDIASUBTYPE_Y41P" },
+  { MEDIASUBTYPE_YUY2, L"MEDIASUBTYPE_YUY2" },
+  { MEDIASUBTYPE_YVYU, L"MEDIASUBTYPE_YVYU" },
+  { MEDIASUBTYPE_UYVY, L"MEDIASUBTYPE_UYVY" },
+  { MEDIASUBTYPE_Y211, L"MEDIASUBTYPE_Y211" },
+  { MEDIASUBTYPE_CLJR, L"MEDIASUBTYPE_CLJR" },
+  { MEDIASUBTYPE_IF09, L"MEDIASUBTYPE_IF09" },
+  { MEDIASUBTYPE_CPLA, L"MEDIASUBTYPE_CPLA" },
+  { MEDIASUBTYPE_MJPG, L"MEDIASUBTYPE_MJPG" },
+  { MEDIASUBTYPE_TVMJ, L"MEDIASUBTYPE_TVMJ" },
+  { MEDIASUBTYPE_WAKE, L"MEDIASUBTYPE_WAKE" },
+  { MEDIASUBTYPE_CFCC, L"MEDIASUBTYPE_CFCC" },
+  { MEDIASUBTYPE_IJPG, L"MEDIASUBTYPE_IJPG" },
+  { MEDIASUBTYPE_Plum, L"MEDIASUBTYPE_Plum" },
+  { MEDIASUBTYPE_DVCS, L"MEDIASUBTYPE_DVCS" },
+  { MEDIASUBTYPE_H264, L"MEDIASUBTYPE_H264" },
+  { MEDIASUBTYPE_DVSD, L"MEDIASUBTYPE_DVSD" },
+  { MEDIASUBTYPE_MDVF, L"MEDIASUBTYPE_MDVF" },
+  { MEDIASUBTYPE_RGB1, L"MEDIASUBTYPE_RGB1" },
+  { MEDIASUBTYPE_RGB4, L"MEDIASUBTYPE_RGB4" },
+  { MEDIASUBTYPE_RGB8, L"MEDIASUBTYPE_RGB8" },
+  { MEDIASUBTYPE_RGB565, L"MEDIASUBTYPE_RGB565" },
+  { MEDIASUBTYPE_RGB555, L"MEDIASUBTYPE_RGB555" },
+  { MEDIASUBTYPE_RGB24, L"MEDIASUBTYPE_RGB24" },
+  { MEDIASUBTYPE_RGB32, L"MEDIASUBTYPE_RGB32" },
+  { MEDIASUBTYPE_ARGB1555, L"MEDIASUBTYPE_ARGB1555" },
+  { MEDIASUBTYPE_ARGB4444, L"MEDIASUBTYPE_ARGB4444" },
+  { MEDIASUBTYPE_ARGB32, L"MEDIASUBTYPE_ARGB32" },
+  { MEDIASUBTYPE_A2R10G10B10, L"MEDIASUBTYPE_A2R10G10B10" },
+  { MEDIASUBTYPE_A2B10G10R10, L"MEDIASUBTYPE_A2B10G10R10" },
+  { MEDIASUBTYPE_AYUV, L"MEDIASUBTYPE_AYUV" },
+  { MEDIASUBTYPE_AI44, L"MEDIASUBTYPE_AI44" },
+  { MEDIASUBTYPE_IA44, L"MEDIASUBTYPE_IA44" },
+  { MEDIASUBTYPE_RGB32_D3D_DX7_RT, L"MEDIASUBTYPE_RGB32_D3D_DX7_RT" },
+  { MEDIASUBTYPE_RGB16_D3D_DX7_RT, L"MEDIASUBTYPE_RGB16_D3D_DX7_RT" },
+  { MEDIASUBTYPE_ARGB32_D3D_DX7_RT, L"MEDIASUBTYPE_ARGB32_D3D_DX7_RT" },
+  { MEDIASUBTYPE_ARGB4444_D3D_DX7_RT, L"MEDIASUBTYPE_ARGB4444_D3D_DX7_RT" },
+  { MEDIASUBTYPE_ARGB1555_D3D_DX7_RT, L"MEDIASUBTYPE_ARGB1555_D3D_DX7_RT" },
+  { MEDIASUBTYPE_RGB32_D3D_DX9_RT, L"MEDIASUBTYPE_RGB32_D3D_DX9_RT" },
+  { MEDIASUBTYPE_RGB16_D3D_DX9_RT, L"MEDIASUBTYPE_RGB16_D3D_DX9_RT" },
+  { MEDIASUBTYPE_ARGB32_D3D_DX9_RT, L"MEDIASUBTYPE_ARGB32_D3D_DX9_RT" },
+  { MEDIASUBTYPE_ARGB4444_D3D_DX9_RT, L"MEDIASUBTYPE_ARGB4444_D3D_DX9_RT" },
+  { MEDIASUBTYPE_ARGB1555_D3D_DX9_RT, L"MEDIASUBTYPE_ARGB1555_D3D_DX9_RT" },
+  { MEDIASUBTYPE_YV12, L"MEDIASUBTYPE_YV12" },
+  { MEDIASUBTYPE_NV12, L"MEDIASUBTYPE_NV12" },
+  { MEDIASUBTYPE_NV11, L"MEDIASUBTYPE_NV11" },
+  { MEDIASUBTYPE_P208, L"MEDIASUBTYPE_P208" },
+  { MEDIASUBTYPE_P210, L"MEDIASUBTYPE_P210" },
+  { MEDIASUBTYPE_P216, L"MEDIASUBTYPE_P216" },
+  { MEDIASUBTYPE_P010, L"MEDIASUBTYPE_P010" },
+  { MEDIASUBTYPE_P016, L"MEDIASUBTYPE_P016" },
+  { MEDIASUBTYPE_Y210, L"MEDIASUBTYPE_Y210" },
+  { MEDIASUBTYPE_Y216, L"MEDIASUBTYPE_Y216" },
+  { MEDIASUBTYPE_P408, L"MEDIASUBTYPE_P408" },
+  { MEDIASUBTYPE_NV24, L"MEDIASUBTYPE_NV24" },
+  { MEDIASUBTYPE_IMC1, L"MEDIASUBTYPE_IMC1" },
+  { MEDIASUBTYPE_IMC2, L"MEDIASUBTYPE_IMC2" },
+  { MEDIASUBTYPE_IMC3, L"MEDIASUBTYPE_IMC3" },
+  { MEDIASUBTYPE_IMC4, L"MEDIASUBTYPE_IMC4" },
+  { MEDIASUBTYPE_S340, L"MEDIASUBTYPE_S340" },
+  { MEDIASUBTYPE_S342, L"MEDIASUBTYPE_S342" },
+  { MEDIASUBTYPE_Overlay, L"MEDIASUBTYPE_Overlay" },
+  { MEDIASUBTYPE_MPEG1Packet, L"MEDIASUBTYPE_MPEG1Packet" },
+  { MEDIASUBTYPE_MPEG1Payload, L"MEDIASUBTYPE_MPEG1Payload" },
+  { MEDIASUBTYPE_MPEG1AudioPayload, L"MEDIASUBTYPE_MPEG1AudioPayload" },
+  { MEDIATYPE_MPEG1SystemStream, L"MEDIATYPE_MPEG1SystemStream" },
+  { MEDIASUBTYPE_MPEG1System, L"MEDIASUBTYPE_MPEG1System" },
+  { MEDIASUBTYPE_MPEG1VideoCD, L"MEDIASUBTYPE_MPEG1VideoCD" },
+  { MEDIASUBTYPE_MPEG1Video, L"MEDIASUBTYPE_MPEG1Video" },
+  { MEDIASUBTYPE_MPEG1Audio, L"MEDIASUBTYPE_MPEG1Audio" },
+  { MEDIASUBTYPE_Avi, L"MEDIASUBTYPE_Avi" },
+  { MEDIASUBTYPE_Asf, L"MEDIASUBTYPE_Asf" },
+  { MEDIASUBTYPE_QTMovie, L"MEDIASUBTYPE_QTMovie" },
+  { MEDIASUBTYPE_QTRpza, L"MEDIASUBTYPE_QTRpza" },
+  { MEDIASUBTYPE_QTSmc, L"MEDIASUBTYPE_QTSmc" },
+  { MEDIASUBTYPE_QTRle, L"MEDIASUBTYPE_QTRle" },
+  { MEDIASUBTYPE_QTJpeg, L"MEDIASUBTYPE_QTJpeg" },
+  { MEDIASUBTYPE_PCMAudio_Obsolete, L"MEDIASUBTYPE_PCMAudio_Obsolete" },
+  { MEDIASUBTYPE_PCM, L"MEDIASUBTYPE_PCM" },
+  { MEDIASUBTYPE_WAVE, L"MEDIASUBTYPE_WAVE" },
+  { MEDIASUBTYPE_AU, L"MEDIASUBTYPE_AU" },
+  { MEDIASUBTYPE_AIFF, L"MEDIASUBTYPE_AIFF" },
+  { MEDIASUBTYPE_dvsd, L"MEDIASUBTYPE_dvsd" },
+  { MEDIASUBTYPE_dvhd, L"MEDIASUBTYPE_dvhd" },
+  { MEDIASUBTYPE_dvsl, L"MEDIASUBTYPE_dvsl" },
+  { MEDIASUBTYPE_dv25, L"MEDIASUBTYPE_dv25" },
+  { MEDIASUBTYPE_dv50, L"MEDIASUBTYPE_dv50" },
+  { MEDIASUBTYPE_dvh1, L"MEDIASUBTYPE_dvh1" },
+  { MEDIASUBTYPE_Line21_BytePair, L"MEDIASUBTYPE_Line21_BytePair" },
+  { MEDIASUBTYPE_Line21_GOPPacket, L"MEDIASUBTYPE_Line21_GOPPacket" },
+  { MEDIASUBTYPE_Line21_VBIRawData, L"MEDIASUBTYPE_Line21_VBIRawData" },
+  { MEDIASUBTYPE_708_608Data, L"MEDIASUBTYPE_708_608Data" },
+  { MEDIASUBTYPE_DtvCcData, L"MEDIASUBTYPE_DtvCcData" },
+  { MEDIASUBTYPE_CC_CONTAINER, L"MEDIASUBTYPE_CC_CONTAINER" },
+  { MEDIASUBTYPE_TELETEXT, L"MEDIASUBTYPE_TELETEXT" },
+  { MEDIASUBTYPE_VBI, L"MEDIASUBTYPE_VBI" },
+  { MEDIASUBTYPE_WSS, L"MEDIASUBTYPE_WSS" },
+  { MEDIASUBTYPE_XDS, L"MEDIASUBTYPE_XDS" },
+  { MEDIASUBTYPE_VPS, L"MEDIASUBTYPE_VPS" },
+  { MEDIASUBTYPE_DRM_Audio, L"MEDIASUBTYPE_DRM_Audio" },
+  { MEDIASUBTYPE_IEEE_FLOAT, L"MEDIASUBTYPE_IEEE_FLOAT" },
+  { MEDIASUBTYPE_DOLBY_AC3_SPDIF, L"MEDIASUBTYPE_DOLBY_AC3_SPDIF" },
+  { MEDIASUBTYPE_RAW_SPORT, L"MEDIASUBTYPE_RAW_SPORT" },
+  { MEDIASUBTYPE_SPDIF_TAG_241h, L"MEDIASUBTYPE_SPDIF_TAG_241h" },
+  { FORMAT_None, L"FORMAT_None" },
+  { FORMAT_VideoInfo, L"FORMAT_VideoInfo" },
+  { FORMAT_VideoInfo2, L"FORMAT_VideoInfo2" },
+  { FORMAT_WaveFormatEx, L"FORMAT_WaveFormatEx" },
+  { FORMAT_MPEGVideo, L"FORMAT_MPEGVideo" },
+  { FORMAT_MPEGStreams, L"FORMAT_MPEGStreams" },
+  { FORMAT_DvInfo, L"FORMAT_DvInfo" },
+  { FORMAT_525WSS, L"FORMAT_525WSS" },
+  { FORMAT_AnalogVideo, L"FORMAT_AnalogVideo" },
+  { MEDIATYPE_AnalogVideo, L"MEDIATYPE_AnalogVideo" },
+  { MEDIASUBTYPE_AnalogVideo_NTSC_M, L"MEDIASUBTYPE_AnalogVideo_NTSC_M" },
+  { MEDIASUBTYPE_AnalogVideo_PAL_B, L"MEDIASUBTYPE_AnalogVideo_PAL_B" },
+  { MEDIASUBTYPE_AnalogVideo_PAL_D, L"MEDIASUBTYPE_AnalogVideo_PAL_D" },
+  { MEDIASUBTYPE_AnalogVideo_PAL_G, L"MEDIASUBTYPE_AnalogVideo_PAL_G" },
+  { MEDIASUBTYPE_AnalogVideo_PAL_H, L"MEDIASUBTYPE_AnalogVideo_PAL_H" },
+  { MEDIASUBTYPE_AnalogVideo_PAL_I, L"MEDIASUBTYPE_AnalogVideo_PAL_I" },
+  { MEDIASUBTYPE_AnalogVideo_PAL_M, L"MEDIASUBTYPE_AnalogVideo_PAL_M" },
+  { MEDIASUBTYPE_AnalogVideo_PAL_N, L"MEDIASUBTYPE_AnalogVideo_PAL_N" },
+  { MEDIASUBTYPE_AnalogVideo_PAL_N_COMBO, L"MEDIASUBTYPE_AnalogVideo_PAL_N_COMBO" },
+  { MEDIASUBTYPE_AnalogVideo_SECAM_B, L"MEDIASUBTYPE_AnalogVideo_SECAM_B" },
+  { MEDIASUBTYPE_AnalogVideo_SECAM_D, L"MEDIASUBTYPE_AnalogVideo_SECAM_D" },
+  { MEDIASUBTYPE_AnalogVideo_SECAM_G, L"MEDIASUBTYPE_AnalogVideo_SECAM_G" },
+  { MEDIASUBTYPE_AnalogVideo_SECAM_H, L"MEDIASUBTYPE_AnalogVideo_SECAM_H" },
+  { MEDIASUBTYPE_AnalogVideo_SECAM_K, L"MEDIASUBTYPE_AnalogVideo_SECAM_K" },
+  { MEDIASUBTYPE_AnalogVideo_SECAM_K1, L"MEDIASUBTYPE_AnalogVideo_SECAM_K1" },
+  { MEDIASUBTYPE_AnalogVideo_SECAM_L, L"MEDIASUBTYPE_AnalogVideo_SECAM_L" },
+  { MEDIATYPE_AnalogAudio, L"MEDIATYPE_AnalogAudio" },
+  { FORMAT_CAPTIONED_H264VIDEO, L"FORMAT_CAPTIONED_H264VIDEO" },
+  { FORMAT_CC_CONTAINER, L"FORMAT_CC_CONTAINER" },
+  { CAPTION_FORMAT_ATSC, L"CAPTION_FORMAT_ATSC" },
+  { CAPTION_FORMAT_DVB, L"CAPTION_FORMAT_DVB" },
+  { CAPTION_FORMAT_DIRECTV, L"CAPTION_FORMAT_DIRECTV" },
+  { CAPTION_FORMAT_ECHOSTAR, L"CAPTION_FORMAT_ECHOSTAR" },
+  { FORMAT_CAPTIONED_MPEG2VIDEO, L"FORMAT_CAPTIONED_MPEG2VIDEO" },
+
+  // From wmcodecdsp.h
+  { MEDIASUBTYPE_Y41T, L"MEDIASUBTYPE_Y41T" },
+  { MEDIASUBTYPE_Y42T, L"MEDIASUBTYPE_Y42T" },
+  { MEDIASUBTYPE_NV11, L"MEDIASUBTYPE_NV11" },
+  { MEDIASUBTYPE_V216, L"MEDIASUBTYPE_V216" },
+  { MEDIASUBTYPE_V410, L"MEDIASUBTYPE_V410" },
+  { MEDIASUBTYPE_v210, L"MEDIASUBTYPE_v210" },
+  { MEDIASUBTYPE_I420, L"MEDIASUBTYPE_I420" },
+  { MEDIASUBTYPE_WVC1, L"MEDIASUBTYPE_WVC1" },
+  { MEDIASUBTYPE_wvc1, L"MEDIASUBTYPE_wvc1" },
+  { MEDIASUBTYPE_WMVA, L"MEDIASUBTYPE_WMVA" },
+  { MEDIASUBTYPE_wmva, L"MEDIASUBTYPE_wmva" },
+  { MEDIASUBTYPE_WMVB, L"MEDIASUBTYPE_WMVB" },
+  { MEDIASUBTYPE_wmvb, L"MEDIASUBTYPE_wmvb" },
+  { MEDIASUBTYPE_WMVR, L"MEDIASUBTYPE_WMVR" },
+  { MEDIASUBTYPE_wmvr, L"MEDIASUBTYPE_wmvr" },
+  { MEDIASUBTYPE_WMVP, L"MEDIASUBTYPE_WMVP" },
+  { MEDIASUBTYPE_wmvp, L"MEDIASUBTYPE_wmvp" },
+  { MEDIASUBTYPE_WVP2, L"MEDIASUBTYPE_WVP2" },
+  { MEDIASUBTYPE_wvp2, L"MEDIASUBTYPE_wvp2" },
+  { MEDIASUBTYPE_WMV3, L"MEDIASUBTYPE_WMV3" },
+  { MEDIASUBTYPE_wmv3, L"MEDIASUBTYPE_wmv3" },
+  { MEDIASUBTYPE_WMV2, L"MEDIASUBTYPE_WMV2" },
+  { MEDIASUBTYPE_wmv2, L"MEDIASUBTYPE_wmv2" },
+  { MEDIASUBTYPE_WMV1, L"MEDIASUBTYPE_WMV1" },
+  { MEDIASUBTYPE_wmv1, L"MEDIASUBTYPE_wmv1" },
+  { MEDIASUBTYPE_MPG4, L"MEDIASUBTYPE_MPG4" },
+  { MEDIASUBTYPE_mpg4, L"MEDIASUBTYPE_mpg4" },
+  { MEDIASUBTYPE_MP42, L"MEDIASUBTYPE_MP42" },
+  { MEDIASUBTYPE_mp42, L"MEDIASUBTYPE_mp42" },
+  { MEDIASUBTYPE_MP43, L"MEDIASUBTYPE_MP43" },
+  { MEDIASUBTYPE_mp43, L"MEDIASUBTYPE_mp43" },
+  { MEDIASUBTYPE_MP4S, L"MEDIASUBTYPE_MP4S" },
+  { MEDIASUBTYPE_mp4s, L"MEDIASUBTYPE_mp4s" },
+  { MEDIASUBTYPE_M4S2, L"MEDIASUBTYPE_M4S2" },
+  { MEDIASUBTYPE_m4s2, L"MEDIASUBTYPE_m4s2" },
+  { MEDIASUBTYPE_MSS1, L"MEDIASUBTYPE_MSS1" },
+  { MEDIASUBTYPE_MSS2, L"MEDIASUBTYPE_MSS2" },
+  { MEDIASUBTYPE_MSAUDIO1, L"MEDIASUBTYPE_MSAUDIO1" },
+  { MEDIASUBTYPE_WMAUDIO2, L"MEDIASUBTYPE_WMAUDIO2" },
+  { MEDIASUBTYPE_WMAUDIO3, L"MEDIASUBTYPE_WMAUDIO3" },
+  { MEDIASUBTYPE_WMAUDIO_LOSSLESS, L"MEDIASUBTYPE_WMAUDIO_LOSSLESS" },
+  { MEDIASUBTYPE_WMASPDIF, L"MEDIASUBTYPE_WMASPDIF" },
+  { MEDIASUBTYPE_WMAUDIO4, L"MEDIASUBTYPE_WMAUDIO4" },
+  { MEDIASUBTYPE_MPEG_ADTS_AAC, L"MEDIASUBTYPE_MPEG_ADTS_AAC" },
+  { MEDIASUBTYPE_MPEG_RAW_AAC, L"MEDIASUBTYPE_MPEG_RAW_AAC" },
+  { MEDIASUBTYPE_MPEG_LOAS, L"MEDIASUBTYPE_MPEG_LOAS" },
+  { MEDIASUBTYPE_NOKIA_MPEG_ADTS_AAC, L"MEDIASUBTYPE_NOKIA_MPEG_ADTS_AAC" },
+  { MEDIASUBTYPE_NOKIA_MPEG_RAW_AAC, L"MEDIASUBTYPE_NOKIA_MPEG_RAW_AAC" },
+  { MEDIASUBTYPE_VODAFONE_MPEG_ADTS_AAC, L"MEDIASUBTYPE_VODAFONE_MPEG_ADTS_AAC" },
+  { MEDIASUBTYPE_VODAFONE_MPEG_RAW_AAC, L"MEDIASUBTYPE_VODAFONE_MPEG_RAW_AAC" },
+  { MEDIASUBTYPE_MPEG_HEAAC, L"MEDIASUBTYPE_MPEG_HEAAC" },
+  { MEDIASUBTYPE_RAW_AAC1, L"MEDIASUBTYPE_RAW_AAC1" },
+  { MEDIASUBTYPE_DVM, L"MEDIASUBTYPE_DVM" },
+  { MEDIASUBTYPE_DTS2, L"MEDIASUBTYPE_DTS2" },
+  { MEDIASUBTYPE_DOLBY_DDPLUS, L"MEDIASUBTYPE_DOLBY_DDPLUS" },
+  { MEDIASUBTYPE_DOLBY_TRUEHD, L"MEDIASUBTYPE_DOLBY_TRUEHD" },
+  { MEDIASUBTYPE_DTS_HD, L"MEDIASUBTYPE_DTS_HD" },
+  { MEDIASUBTYPE_h264, L"MEDIASUBTYPE_h264" },
+  { MEDIASUBTYPE_AVC1, L"MEDIASUBTYPE_AVC1" },
+  { MEDIASUBTYPE_X264, L"MEDIASUBTYPE_X264" },
+  { MEDIASUBTYPE_x264, L"MEDIASUBTYPE_x264" },
+
+  // From mfidl.h
+  { MF_PD_PMPHOST_CONTEXT, L"MF_PD_PMPHOST_CONTEXT" },
+  { MF_PD_APP_CONTEXT, L"MF_PD_APP_CONTEXT" },
+  { MF_PD_DURATION, L"MF_PD_DURATION" },
+  { MF_PD_TOTAL_FILE_SIZE, L"MF_PD_TOTAL_FILE_SIZE" },
+  { MF_PD_AUDIO_ENCODING_BITRATE, L"MF_PD_AUDIO_ENCODING_BITRATE" },
+  { MF_PD_VIDEO_ENCODING_BITRATE, L"MF_PD_VIDEO_ENCODING_BITRATE" },
+  { MF_PD_MIME_TYPE, L"MF_PD_MIME_TYPE" },
+  { MF_PD_LAST_MODIFIED_TIME, L"MF_PD_LAST_MODIFIED_TIME" },
+  { MF_PD_PLAYBACK_ELEMENT_ID, L"MF_PD_PLAYBACK_ELEMENT_ID" },
+  { MF_PD_PREFERRED_LANGUAGE, L"MF_PD_PREFERRED_LANGUAGE" },
+  { MF_PD_PLAYBACK_BOUNDARY_TIME, L"MF_PD_PLAYBACK_BOUNDARY_TIME" },
+  { MF_PD_AUDIO_ISVARIABLEBITRATE, L"MF_PD_AUDIO_ISVARIABLEBITRATE" },
+  { MF_SD_LANGUAGE, L"MF_SD_LANGUAGE" },
+  { MF_SD_PROTECTED, L"MF_SD_PROTECTED" },
+  { MF_SD_STREAM_NAME, L"MF_SD_STREAM_NAME" },
+  { MF_SD_MUTUALLY_EXCLUSIVE, L"MF_SD_MUTUALLY_EXCLUSIVE" },
+
+  //From wmcontainer.h
+  { MF_PD_ASF_FILEPROPERTIES_FILE_ID, L"MF_PD_ASF_FILEPROPERTIES_FILE_ID" },
+  { MF_PD_ASF_FILEPROPERTIES_CREATION_TIME, L"MF_PD_ASF_FILEPROPERTIES_CREATION_TIME" },
+  { MF_PD_ASF_FILEPROPERTIES_PACKETS, L"MF_PD_ASF_FILEPROPERTIES_PACKETS" },
+  { MF_PD_ASF_FILEPROPERTIES_PLAY_DURATION, L"MF_PD_ASF_FILEPROPERTIES_PLAY_DURATION" },
+  { MF_PD_ASF_FILEPROPERTIES_SEND_DURATION, L"MF_PD_ASF_FILEPROPERTIES_SEND_DURATION" },
+  { MF_PD_ASF_FILEPROPERTIES_PREROLL, L"MF_PD_ASF_FILEPROPERTIES_PREROLL" },
+  { MF_PD_ASF_FILEPROPERTIES_FLAGS, L"MF_PD_ASF_FILEPROPERTIES_FLAGS" },
+  { MF_PD_ASF_FILEPROPERTIES_MIN_PACKET_SIZE, L"MF_PD_ASF_FILEPROPERTIES_MIN_PACKET_SIZE" },
+  { MF_PD_ASF_FILEPROPERTIES_MAX_PACKET_SIZE, L"MF_PD_ASF_FILEPROPERTIES_MAX_PACKET_SIZE" },
+  { MF_PD_ASF_FILEPROPERTIES_MAX_BITRATE, L"MF_PD_ASF_FILEPROPERTIES_MAX_BITRATE" },
+  { MF_PD_ASF_CONTENTENCRYPTION_TYPE, L"MF_PD_ASF_CONTENTENCRYPTION_TYPE" },
+  { MF_PD_ASF_CONTENTENCRYPTION_KEYID, L"MF_PD_ASF_CONTENTENCRYPTION_KEYID" },
+  { MF_PD_ASF_CONTENTENCRYPTION_SECRET_DATA, L"MF_PD_ASF_CONTENTENCRYPTION_SECRET_DATA" },
+  { MF_PD_ASF_CONTENTENCRYPTION_LICENSE_URL, L"MF_PD_ASF_CONTENTENCRYPTION_LICENSE_URL" },
+  { MF_PD_ASF_CONTENTENCRYPTIONEX_ENCRYPTION_DATA, L"MF_PD_ASF_CONTENTENCRYPTIONEX_ENCRYPTION_DATA" },
+  { MF_PD_ASF_LANGLIST, L"MF_PD_ASF_LANGLIST" },
+  { MF_PD_ASF_LANGLIST_LEGACYORDER, L"MF_PD_ASF_LANGLIST_LEGACYORDER" },
+  { MF_PD_ASF_MARKER, L"MF_PD_ASF_MARKER" },
+  { MF_PD_ASF_SCRIPT, L"MF_PD_ASF_SCRIPT" },
+  { MF_PD_ASF_CODECLIST, L"MF_PD_ASF_CODECLIST" },
+  { MF_PD_ASF_METADATA_IS_VBR, L"MF_PD_ASF_METADATA_IS_VBR" },
+  { MF_PD_ASF_METADATA_V8_VBRPEAK, L"MF_PD_ASF_METADATA_V8_VBRPEAK" },
+  { MF_PD_ASF_METADATA_V8_BUFFERAVERAGE, L"MF_PD_ASF_METADATA_V8_BUFFERAVERAGE" },
+  { MF_PD_ASF_METADATA_LEAKY_BUCKET_PAIRS, L"MF_PD_ASF_METADATA_LEAKY_BUCKET_PAIRS" },
+  { MF_PD_ASF_DATA_START_OFFSET, L"MF_PD_ASF_DATA_START_OFFSET" },
+  { MF_PD_ASF_DATA_LENGTH, L"MF_PD_ASF_DATA_LENGTH" },
+  { MF_SD_ASF_EXTSTRMPROP_LANGUAGE_ID_INDEX, L"MF_SD_ASF_EXTSTRMPROP_LANGUAGE_ID_INDEX" },
+  { MF_SD_ASF_EXTSTRMPROP_AVG_DATA_BITRATE, L"MF_SD_ASF_EXTSTRMPROP_AVG_DATA_BITRATE" },
+  { MF_SD_ASF_EXTSTRMPROP_AVG_BUFFERSIZE, L"MF_SD_ASF_EXTSTRMPROP_AVG_BUFFERSIZE" },
+  { MF_SD_ASF_EXTSTRMPROP_MAX_DATA_BITRATE, L"MF_SD_ASF_EXTSTRMPROP_MAX_DATA_BITRATE" },
+  { MF_SD_ASF_EXTSTRMPROP_MAX_BUFFERSIZE, L"MF_SD_ASF_EXTSTRMPROP_MAX_BUFFERSIZE" },
+  { MF_SD_ASF_STREAMBITRATES_BITRATE, L"MF_SD_ASF_STREAMBITRATES_BITRATE" },
+  { MF_SD_ASF_METADATA_DEVICE_CONFORMANCE_TEMPLATE, L"MF_SD_ASF_METADATA_DEVICE_CONFORMANCE_TEMPLATE" },
+  { MF_PD_ASF_INFO_HAS_AUDIO, L"MF_PD_ASF_INFO_HAS_AUDIO" },
+  { MF_PD_ASF_INFO_HAS_VIDEO, L"MF_PD_ASF_INFO_HAS_VIDEO" },
+  { MF_PD_ASF_INFO_HAS_NON_AUDIO_VIDEO, L"MF_PD_ASF_INFO_HAS_NON_AUDIO_VIDEO" },
+  { MF_ASFPROFILE_MINPACKETSIZE, L"MF_ASFPROFILE_MINPACKETSIZE" },
+  { MF_ASFPROFILE_MAXPACKETSIZE, L"MF_ASFPROFILE_MAXPACKETSIZE" },
+  { MF_ASFSTREAMCONFIG_LEAKYBUCKET1, L"MF_ASFSTREAMCONFIG_LEAKYBUCKET1" },
+  { MF_ASFSTREAMCONFIG_LEAKYBUCKET2, L"MF_ASFSTREAMCONFIG_LEAKYBUCKET2" },
+  { MFASFSampleExtension_SampleDuration, L"MFASFSampleExtension_SampleDuration" },
+  { MFASFSampleExtension_OutputCleanPoint, L"MFASFSampleExtension_OutputCleanPoint" },
+  { MFASFSampleExtension_SMPTE, L"MFASFSampleExtension_SMPTE" },
+  { MFASFSampleExtension_FileName, L"MFASFSampleExtension_FileName" },
+  { MFASFSampleExtension_ContentType, L"MFASFSampleExtension_ContentType" },
+  { MFASFSampleExtension_PixelAspectRatio, L"MFASFSampleExtension_PixelAspectRatio" },
+  { MFASFSampleExtension_Encryption_SampleID, L"MFASFSampleExtension_Encryption_SampleID" },
+  { MFASFSampleExtension_Encryption_KeyID, L"MFASFSampleExtension_Encryption_KeyID" },
+  { MFASFMutexType_Language, L"MFASFMutexType_Language" },
+  { MFASFMutexType_Bitrate, L"MFASFMutexType_Bitrate" },
+  { MFASFMutexType_Presentation, L"MFASFMutexType_Presentation" },
+  { MFASFMutexType_Unknown, L"MFASFMutexType_Unknown" },
+
+  // From wmsdkidl.h
+  { WMMEDIASUBTYPE_Base, L"WMMEDIASUBTYPE_Base" },
+  { WMMEDIATYPE_Video, L"WMMEDIATYPE_Video" },
+  { WMMEDIASUBTYPE_RGB1, L"WMMEDIASUBTYPE_RGB1" },
+  { WMMEDIASUBTYPE_RGB4, L"WMMEDIASUBTYPE_RGB4" },
+  { WMMEDIASUBTYPE_RGB8, L"WMMEDIASUBTYPE_RGB8" },
+  { WMMEDIASUBTYPE_RGB565, L"WMMEDIASUBTYPE_RGB565" },
+  { WMMEDIASUBTYPE_RGB555, L"WMMEDIASUBTYPE_RGB555" },
+  { WMMEDIASUBTYPE_RGB24, L"WMMEDIASUBTYPE_RGB24" },
+  { WMMEDIASUBTYPE_RGB32, L"WMMEDIASUBTYPE_RGB32" },
+  { WMMEDIASUBTYPE_I420, L"WMMEDIASUBTYPE_I420" },
+  { WMMEDIASUBTYPE_IYUV, L"WMMEDIASUBTYPE_IYUV" },
+  { WMMEDIASUBTYPE_YV12, L"WMMEDIASUBTYPE_YV12" },
+  { WMMEDIASUBTYPE_YUY2, L"WMMEDIASUBTYPE_YUY2" },
+  { WMMEDIASUBTYPE_P422, L"WMMEDIASUBTYPE_P422" },
+  { WMMEDIASUBTYPE_UYVY, L"WMMEDIASUBTYPE_UYVY" },
+  { WMMEDIASUBTYPE_YVYU, L"WMMEDIASUBTYPE_YVYU" },
+  { WMMEDIASUBTYPE_YVU9, L"WMMEDIASUBTYPE_YVU9" },
+  { WMMEDIASUBTYPE_VIDEOIMAGE, L"WMMEDIASUBTYPE_VIDEOIMAGE" },
+  { WMMEDIASUBTYPE_MP43, L"WMMEDIASUBTYPE_MP43" },
+  { WMMEDIASUBTYPE_MP4S, L"WMMEDIASUBTYPE_MP4S" },
+  { WMMEDIASUBTYPE_M4S2, L"WMMEDIASUBTYPE_M4S2" },
+  { WMMEDIASUBTYPE_WMV1, L"WMMEDIASUBTYPE_WMV1" },
+  { WMMEDIASUBTYPE_WMV2, L"WMMEDIASUBTYPE_WMV2" },
+  { WMMEDIASUBTYPE_MSS1, L"WMMEDIASUBTYPE_MSS1" },
+  { WMMEDIASUBTYPE_MPEG2_VIDEO, L"WMMEDIASUBTYPE_MPEG2_VIDEO" },
+  { WMMEDIATYPE_Audio, L"WMMEDIATYPE_Audio" },
+  { WMMEDIASUBTYPE_PCM, L"WMMEDIASUBTYPE_PCM" },
+  { WMMEDIASUBTYPE_DRM, L"WMMEDIASUBTYPE_DRM" },
+  { WMMEDIASUBTYPE_WMAudioV9, L"WMMEDIASUBTYPE_WMAudioV9" },
+  { WMMEDIASUBTYPE_WMAudio_Lossless, L"WMMEDIASUBTYPE_WMAudio_Lossless" },
+  { WMMEDIASUBTYPE_MSS2, L"WMMEDIASUBTYPE_MSS2" },
+  { WMMEDIASUBTYPE_WMSP1, L"WMMEDIASUBTYPE_WMSP1" },
+  { WMMEDIASUBTYPE_WMSP2, L"WMMEDIASUBTYPE_WMSP2" },
+  { WMMEDIASUBTYPE_WMV3, L"WMMEDIASUBTYPE_WMV3" },
+  { WMMEDIASUBTYPE_WMVP, L"WMMEDIASUBTYPE_WMVP" },
+  { WMMEDIASUBTYPE_WVP2, L"WMMEDIASUBTYPE_WVP2" },
+  { WMMEDIASUBTYPE_WMVA, L"WMMEDIASUBTYPE_WMVA" },
+  { WMMEDIASUBTYPE_WVC1, L"WMMEDIASUBTYPE_WVC1" },
+  { WMMEDIASUBTYPE_WMAudioV8, L"WMMEDIASUBTYPE_WMAudioV8" },
+  { WMMEDIASUBTYPE_WMAudioV7, L"WMMEDIASUBTYPE_WMAudioV7" },
+  { WMMEDIASUBTYPE_WMAudioV2, L"WMMEDIASUBTYPE_WMAudioV2" },
+  { WMMEDIASUBTYPE_ACELPnet, L"WMMEDIASUBTYPE_ACELPnet" },
+  { WMMEDIASUBTYPE_MP3, L"WMMEDIASUBTYPE_MP3" },
+  { WMMEDIASUBTYPE_WebStream, L"WMMEDIASUBTYPE_WebStream" },
+  { WMMEDIATYPE_Script, L"WMMEDIATYPE_Script" },
+  { WMMEDIATYPE_Image, L"WMMEDIATYPE_Image" },
+  { WMMEDIATYPE_FileTransfer, L"WMMEDIATYPE_FileTransfer" },
+  { WMMEDIATYPE_Text, L"WMMEDIATYPE_Text" },
+  { WMFORMAT_VideoInfo, L"WMFORMAT_VideoInfo" },
+  { WMFORMAT_MPEG2Video, L"WMFORMAT_MPEG2Video" },
+  { WMFORMAT_WaveFormatEx, L"WMFORMAT_WaveFormatEx" },
+  { WMFORMAT_Script, L"WMFORMAT_Script" },
+  { WMFORMAT_WebStream, L"WMFORMAT_WebStream" },
+  { WMSCRIPTTYPE_TwoStrings, L"WMSCRIPTTYPE_TwoStrings" },
+  { WM_SampleExtensionGUID_OutputCleanPoint, L"WM_SampleExtensionGUID_OutputCleanPoint" },
+  { WM_SampleExtensionGUID_Timecode, L"WM_SampleExtensionGUID_Timecode" },
+  { WM_SampleExtensionGUID_ChromaLocation, L"WM_SampleExtensionGUID_ChromaLocation" },
+  { WM_SampleExtensionGUID_ColorSpaceInfo, L"WM_SampleExtensionGUID_ColorSpaceInfo" },
+  { WM_SampleExtensionGUID_UserDataInfo, L"WM_SampleExtensionGUID_UserDataInfo" },
+  { WM_SampleExtensionGUID_FileName, L"WM_SampleExtensionGUID_FileName" },
+  { WM_SampleExtensionGUID_ContentType, L"WM_SampleExtensionGUID_ContentType" },
+  { WM_SampleExtensionGUID_PixelAspectRatio, L"WM_SampleExtensionGUID_PixelAspectRatio" },
+  { WM_SampleExtensionGUID_SampleDuration, L"WM_SampleExtensionGUID_SampleDuration" },
+  { WM_SampleExtensionGUID_SampleProtectionSalt, L"WM_SampleExtensionGUID_SampleProtectionSalt" },
+
+  // From encdec.h
+  { SID_DRMSecureServiceChannel, L"SID_DRMSecureServiceChannel" },
+  { CLSID_ETFilterEncProperties, L"CLSID_ETFilterEncProperties" },
+  { CLSID_ETFilterTagProperties, L"CLSID_ETFilterTagProperties" },
+  { CLSID_PTFilter, L"CLSID_PTFilter" },
+  { CLSID_DTFilterEncProperties, L"CLSID_DTFilterEncProperties" },
+  { CLSID_DTFilterTagProperties, L"CLSID_DTFilterTagProperties" },
+  { CLSID_XDSCodecProperties, L"CLSID_XDSCodecProperties" },
+  { CLSID_XDSCodecTagProperties, L"CLSID_XDSCodecTagProperties" },
+  { CLSID_CPCAFiltersCategory, L"CLSID_CPCAFiltersCategory" },
+  { EVENTID_XDSCodecNewXDSRating, L"EVENTID_XDSCodecNewXDSRating" },
+  { EVENTID_XDSCodecDuplicateXDSRating, L"EVENTID_XDSCodecDuplicateXDSRating" },
+  { EVENTID_XDSCodecNewXDSPacket, L"EVENTID_XDSCodecNewXDSPacket" },
+  { EVENTID_DTFilterRatingChange, L"EVENTID_DTFilterRatingChange" },
+  { EVENTID_DTFilterRatingsBlock, L"EVENTID_DTFilterRatingsBlock" },
+  { EVENTID_DTFilterRatingsUnblock, L"EVENTID_DTFilterRatingsUnblock" },
+  { EVENTID_DTFilterXDSPacket, L"EVENTID_DTFilterXDSPacket" },
+  { EVENTID_ETFilterEncryptionOn, L"EVENTID_ETFilterEncryptionOn" },
+  { EVENTID_ETFilterEncryptionOff, L"EVENTID_ETFilterEncryptionOff" },
+  { EVENTID_DTFilterCOPPUnblock, L"EVENTID_DTFilterCOPPUnblock" },
+  { EVENTID_EncDecFilterError, L"EVENTID_EncDecFilterError" },
+  { EVENTID_DTFilterCOPPBlock, L"EVENTID_DTFilterCOPPBlock" },
+  { EVENTID_ETFilterCopyOnce, L"EVENTID_ETFilterCopyOnce" },
+  { EVENTID_ETFilterCopyNever, L"EVENTID_ETFilterCopyNever" },
+  { EVENTID_DTFilterDataFormatOK, L"EVENTID_DTFilterDataFormatOK" },
+  { EVENTID_DTFilterDataFormatFailure, L"EVENTID_DTFilterDataFormatFailure" },
+  { EVENTID_ETDTFilterLicenseOK, L"EVENTID_ETDTFilterLicenseOK" },
+  { EVENTID_ETDTFilterLicenseFailure, L"EVENTID_ETDTFilterLicenseFailure" },
+  { MEDIASUBTYPE_ETDTFilter_Tagged, L"MEDIASUBTYPE_ETDTFilter_Tagged" },
+  { FORMATTYPE_ETDTFilter_Tagged, L"FORMATTYPE_ETDTFilter_Tagged" },
+  { MEDIASUBTYPE_CPFilters_Processed, L"MEDIASUBTYPE_CPFilters_Processed" },
+  { FORMATTYPE_CPFilters_Processed, L"FORMATTYPE_CPFilters_Processed" },
+  { EVENTID_EncDecFilterEvent, L"EVENTID_EncDecFilterEvent" },
+  { EVENTID_FormatNotSupportedEvent, L"EVENTID_FormatNotSupportedEvent" },
+  { EVENTID_DemultiplexerFilterDiscontinuity, L"EVENTID_DemultiplexerFilterDiscontinuity" },
+  { DSATTRIB_WMDRMProtectionInfo, L"DSATTRIB_WMDRMProtectionInfo" },
+  { DSATTRIB_BadSampleInfo, L"DSATTRIB_BadSampleInfo" },
+};
+
+static DWORD size_known_guids = _countof( known_guids );
+
+bool is_known_guid( GUID const&guid, wchar_t *buf, size_t len ) {
+  for ( DWORD i = 0; i < size_known_guids; i++ ) {
+    if ( IsEqualGUID( guid, known_guids[ i ].guid ) ) {
+      StringCchCopy( buf, len, known_guids[ i ].lpstrName );
+      return true;
+    }
+  }
+  return false;
+}
+static struct tag_Known_PKeys {
+  PROPERTYKEY propKey;
+  LPWSTR lpstrName;
+} known_pkeys[] =
+{
+  // From propkey.h        
+  { PKEY_Audio_ChannelCount, L"PKEY_Audio_ChannelCount" },
+  { PKEY_Audio_Compression, L"PKEY_Audio_Compression" },
+  { PKEY_Audio_EncodingBitrate, L"PKEY_Audio_EncodingBitrate" },
+  { PKEY_Audio_Format, L"PKEY_Audio_Format" },
+  { PKEY_Audio_IsVariableBitRate, L"PKEY_Audio_IsVariableBitRate" },
+  { PKEY_Audio_PeakValue, L"PKEY_Audio_PeakValue" },
+  { PKEY_Audio_SampleRate, L"PKEY_Audio_SampleRate" },
+  { PKEY_Audio_SampleSize, L"PKEY_Audio_SampleSize" },
+  { PKEY_Audio_StreamName, L"PKEY_Audio_StreamName" },
+  { PKEY_Audio_StreamNumber, L"PKEY_Audio_StreamNumber" },
+  { PKEY_Calendar_Duration, L"PKEY_Calendar_Duration" },
+  { PKEY_Calendar_IsOnline, L"PKEY_Calendar_IsOnline" },
+  { PKEY_Calendar_IsRecurring, L"PKEY_Calendar_IsRecurring" },
+  { PKEY_Calendar_Location, L"PKEY_Calendar_Location" },
+  { PKEY_Calendar_OptionalAttendeeAddresses, L"PKEY_Calendar_OptionalAttendeeAddresses" },
+  { PKEY_Calendar_OptionalAttendeeNames, L"PKEY_Calendar_OptionalAttendeeNames" },
+  { PKEY_Calendar_OrganizerAddress, L"PKEY_Calendar_OrganizerAddress" },
+  { PKEY_Calendar_OrganizerName, L"PKEY_Calendar_OrganizerName" },
+  { PKEY_Calendar_ReminderTime, L"PKEY_Calendar_ReminderTime" },
+  { PKEY_Calendar_RequiredAttendeeAddresses, L"PKEY_Calendar_RequiredAttendeeAddresses" },
+  { PKEY_Calendar_RequiredAttendeeNames, L"PKEY_Calendar_RequiredAttendeeNames" },
+  { PKEY_Calendar_Resources, L"PKEY_Calendar_Resources" },
+  { PKEY_Calendar_ResponseStatus, L"PKEY_Calendar_ResponseStatus" },
+  { PKEY_Calendar_ShowTimeAs, L"PKEY_Calendar_ShowTimeAs" },
+  { PKEY_Calendar_ShowTimeAsText, L"PKEY_Calendar_ShowTimeAsText" },
+  { PKEY_Communication_AccountName, L"PKEY_Communication_AccountName" },
+  { PKEY_Communication_DateItemExpires, L"PKEY_Communication_DateItemExpires" },
+  { PKEY_Communication_FollowupIconIndex, L"PKEY_Communication_FollowupIconIndex" },
+  { PKEY_Communication_HeaderItem, L"PKEY_Communication_HeaderItem" },
+  { PKEY_Communication_PolicyTag, L"PKEY_Communication_PolicyTag" },
+  { PKEY_Communication_SecurityFlags, L"PKEY_Communication_SecurityFlags" },
+  { PKEY_Communication_Suffix, L"PKEY_Communication_Suffix" },
+  { PKEY_Communication_TaskStatus, L"PKEY_Communication_TaskStatus" },
+  { PKEY_Communication_TaskStatusText, L"PKEY_Communication_TaskStatusText" },
+  { PKEY_Computer_DecoratedFreeSpace, L"PKEY_Computer_DecoratedFreeSpace" },
+  { PKEY_Contact_Anniversary, L"PKEY_Contact_Anniversary" },
+  { PKEY_Contact_AssistantName, L"PKEY_Contact_AssistantName" },
+  { PKEY_Contact_AssistantTelephone, L"PKEY_Contact_AssistantTelephone" },
+  { PKEY_Contact_Birthday, L"PKEY_Contact_Birthday" },
+  { PKEY_Contact_BusinessAddress, L"PKEY_Contact_BusinessAddress" },
+  { PKEY_Contact_BusinessAddressCity, L"PKEY_Contact_BusinessAddressCity" },
+  { PKEY_Contact_BusinessAddressCountry, L"PKEY_Contact_BusinessAddressCountry" },
+  { PKEY_Contact_BusinessAddressPostalCode, L"PKEY_Contact_BusinessAddressPostalCode" },
+  { PKEY_Contact_BusinessAddressPostOfficeBox, L"PKEY_Contact_BusinessAddressPostOfficeBox" },
+  { PKEY_Contact_BusinessAddressState, L"PKEY_Contact_BusinessAddressState" },
+  { PKEY_Contact_BusinessAddressStreet, L"PKEY_Contact_BusinessAddressStreet" },
+  { PKEY_Contact_BusinessFaxNumber, L"PKEY_Contact_BusinessFaxNumber" },
+  { PKEY_Contact_BusinessHomePage, L"PKEY_Contact_BusinessHomePage" },
+  { PKEY_Contact_BusinessTelephone, L"PKEY_Contact_BusinessTelephone" },
+  { PKEY_Contact_CallbackTelephone, L"PKEY_Contact_CallbackTelephone" },
+  { PKEY_Contact_CarTelephone, L"PKEY_Contact_CarTelephone" },
+  { PKEY_Contact_Children, L"PKEY_Contact_Children" },
+  { PKEY_Contact_CompanyMainTelephone, L"PKEY_Contact_CompanyMainTelephone" },
+  { PKEY_Contact_Department, L"PKEY_Contact_Department" },
+  { PKEY_Contact_EmailAddress, L"PKEY_Contact_EmailAddress" },
+  { PKEY_Contact_EmailAddress2, L"PKEY_Contact_EmailAddress2" },
+  { PKEY_Contact_EmailAddress3, L"PKEY_Contact_EmailAddress3" },
+  { PKEY_Contact_EmailAddresses, L"PKEY_Contact_EmailAddresses" },
+  { PKEY_Contact_EmailName, L"PKEY_Contact_EmailName" },
+  { PKEY_Contact_FileAsName, L"PKEY_Contact_FileAsName" },
+  { PKEY_Contact_FirstName, L"PKEY_Contact_FirstName" },
+  { PKEY_Contact_FullName, L"PKEY_Contact_FullName" },
+  { PKEY_Contact_Gender, L"PKEY_Contact_Gender" },
+  { PKEY_Contact_GenderValue, L"PKEY_Contact_GenderValue" },
+  { PKEY_Contact_Hobbies, L"PKEY_Contact_Hobbies" },
+  { PKEY_Contact_HomeAddress, L"PKEY_Contact_HomeAddress" },
+  { PKEY_Contact_HomeAddressCity, L"PKEY_Contact_HomeAddressCity" },
+  { PKEY_Contact_HomeAddressCountry, L"PKEY_Contact_HomeAddressCountry" },
+  { PKEY_Contact_HomeAddressPostalCode, L"PKEY_Contact_HomeAddressPostalCode" },
+  { PKEY_Contact_HomeAddressPostOfficeBox, L"PKEY_Contact_HomeAddressPostOfficeBox" },
+  { PKEY_Contact_HomeAddressState, L"PKEY_Contact_HomeAddressState" },
+  { PKEY_Contact_HomeAddressStreet, L"PKEY_Contact_HomeAddressStreet" },
+  { PKEY_Contact_HomeFaxNumber, L"PKEY_Contact_HomeFaxNumber" },
+  { PKEY_Contact_HomeTelephone, L"PKEY_Contact_HomeTelephone" },
+  { PKEY_Contact_IMAddress, L"PKEY_Contact_IMAddress" },
+  { PKEY_Contact_Initials, L"PKEY_Contact_Initials" },
+  { PKEY_Contact_JA_CompanyNamePhonetic, L"PKEY_Contact_JA_CompanyNamePhonetic" },
+  { PKEY_Contact_JA_FirstNamePhonetic, L"PKEY_Contact_JA_FirstNamePhonetic" },
+  { PKEY_Contact_JA_LastNamePhonetic, L"PKEY_Contact_JA_LastNamePhonetic" },
+  { PKEY_Contact_JobTitle, L"PKEY_Contact_JobTitle" },
+  { PKEY_Contact_Label, L"PKEY_Contact_Label" },
+  { PKEY_Contact_LastName, L"PKEY_Contact_LastName" },
+  { PKEY_Contact_MailingAddress, L"PKEY_Contact_MailingAddress" },
+  { PKEY_Contact_MiddleName, L"PKEY_Contact_MiddleName" },
+  { PKEY_Contact_MobileTelephone, L"PKEY_Contact_MobileTelephone" },
+  { PKEY_Contact_NickName, L"PKEY_Contact_NickName" },
+  { PKEY_Contact_OfficeLocation, L"PKEY_Contact_OfficeLocation" },
+  { PKEY_Contact_OtherAddress, L"PKEY_Contact_OtherAddress" },
+  { PKEY_Contact_OtherAddressCity, L"PKEY_Contact_OtherAddressCity" },
+  { PKEY_Contact_OtherAddressCountry, L"PKEY_Contact_OtherAddressCountry" },
+  { PKEY_Contact_OtherAddressPostalCode, L"PKEY_Contact_OtherAddressPostalCode" },
+  { PKEY_Contact_OtherAddressPostOfficeBox, L"PKEY_Contact_OtherAddressPostOfficeBox" },
+  { PKEY_Contact_OtherAddressState, L"PKEY_Contact_OtherAddressState" },
+  { PKEY_Contact_OtherAddressStreet, L"PKEY_Contact_OtherAddressStreet" },
+  { PKEY_Contact_PagerTelephone, L"PKEY_Contact_PagerTelephone" },
+  { PKEY_Contact_PersonalTitle, L"PKEY_Contact_PersonalTitle" },
+  { PKEY_Contact_PrimaryAddressCity, L"PKEY_Contact_PrimaryAddressCity" },
+  { PKEY_Contact_PrimaryAddressCountry, L"PKEY_Contact_PrimaryAddressCountry" },
+  { PKEY_Contact_PrimaryAddressPostalCode, L"PKEY_Contact_PrimaryAddressPostalCode" },
+  { PKEY_Contact_PrimaryAddressPostOfficeBox, L"PKEY_Contact_PrimaryAddressPostOfficeBox" },
+  { PKEY_Contact_PrimaryAddressState, L"PKEY_Contact_PrimaryAddressState" },
+  { PKEY_Contact_PrimaryAddressStreet, L"PKEY_Contact_PrimaryAddressStreet" },
+  { PKEY_Contact_PrimaryEmailAddress, L"PKEY_Contact_PrimaryEmailAddress" },
+  { PKEY_Contact_PrimaryTelephone, L"PKEY_Contact_PrimaryTelephone" },
+  { PKEY_Contact_Profession, L"PKEY_Contact_Profession" },
+  { PKEY_Contact_SpouseName, L"PKEY_Contact_SpouseName" },
+  { PKEY_Contact_Suffix, L"PKEY_Contact_Suffix" },
+  { PKEY_Contact_TelexNumber, L"PKEY_Contact_TelexNumber" },
+  { PKEY_Contact_TTYTDDTelephone, L"PKEY_Contact_TTYTDDTelephone" },
+  { PKEY_Contact_WebPage, L"PKEY_Contact_WebPage" },
+  { PKEY_AcquisitionID, L"PKEY_AcquisitionID" },
+  { PKEY_ApplicationName, L"PKEY_ApplicationName" },
+  { PKEY_Author, L"PKEY_Author" },
+  { PKEY_Capacity, L"PKEY_Capacity" },
+  { PKEY_Category, L"PKEY_Category" },
+  { PKEY_Comment, L"PKEY_Comment" },
+  { PKEY_Company, L"PKEY_Company" },
+  { PKEY_ComputerName, L"PKEY_ComputerName" },
+  { PKEY_ContainedItems, L"PKEY_ContainedItems" },
+  { PKEY_ContentStatus, L"PKEY_ContentStatus" },
+  { PKEY_ContentType, L"PKEY_ContentType" },
+  { PKEY_Copyright, L"PKEY_Copyright" },
+  { PKEY_DateAccessed, L"PKEY_DateAccessed" },
+  { PKEY_DateAcquired, L"PKEY_DateAcquired" },
+  { PKEY_DateArchived, L"PKEY_DateArchived" },
+  { PKEY_DateCompleted, L"PKEY_DateCompleted" },
+  { PKEY_DateCreated, L"PKEY_DateCreated" },
+  { PKEY_DateImported, L"PKEY_DateImported" },
+  { PKEY_DateModified, L"PKEY_DateModified" },
+  { PKEY_DueDate, L"PKEY_DueDate" },
+  { PKEY_EndDate, L"PKEY_EndDate" },
+  { PKEY_FileAllocationSize, L"PKEY_FileAllocationSize" },
+  { PKEY_FileAttributes, L"PKEY_FileAttributes" },
+  { PKEY_FileCount, L"PKEY_FileCount" },
+  { PKEY_FileDescription, L"PKEY_FileDescription" },
+  { PKEY_FileExtension, L"PKEY_FileExtension" },
+  { PKEY_FileFRN, L"PKEY_FileFRN" },
+  { PKEY_FileName, L"PKEY_FileName" },
+  { PKEY_FileOwner, L"PKEY_FileOwner" },
+  { PKEY_FileVersion, L"PKEY_FileVersion" },
+  { PKEY_FindData, L"PKEY_FindData" },
+  { PKEY_FlagColor, L"PKEY_FlagColor" },
+  { PKEY_FlagColorText, L"PKEY_FlagColorText" },
+  { PKEY_FlagStatus, L"PKEY_FlagStatus" },
+  { PKEY_FlagStatusText, L"PKEY_FlagStatusText" },
+  { PKEY_FreeSpace, L"PKEY_FreeSpace" },
+  { PKEY_FullText, L"PKEY_FullText" },
+  { PKEY_Identity, L"PKEY_Identity" },
+  { PKEY_Identity_Blob, L"PKEY_Identity_Blob" },
+  { PKEY_Identity_DisplayName, L"PKEY_Identity_DisplayName" },
+  { PKEY_Identity_IsMeIdentity, L"PKEY_Identity_IsMeIdentity" },
+  { PKEY_Identity_PrimaryEmailAddress, L"PKEY_Identity_PrimaryEmailAddress" },
+  { PKEY_Identity_ProviderID, L"PKEY_Identity_ProviderID" },
+  { PKEY_Identity_UniqueID, L"PKEY_Identity_UniqueID" },
+  { PKEY_Identity_UserName, L"PKEY_Identity_UserName" },
+  { PKEY_IdentityProvider_Name, L"PKEY_IdentityProvider_Name" },
+  { PKEY_IdentityProvider_Picture, L"PKEY_IdentityProvider_Picture" },
+  { PKEY_ImageParsingName, L"PKEY_ImageParsingName" },
+  { PKEY_Importance, L"PKEY_Importance" },
+  { PKEY_ImportanceText, L"PKEY_ImportanceText" },
+  { PKEY_IsAttachment, L"PKEY_IsAttachment" },
+  { PKEY_IsDefaultNonOwnerSaveLocation, L"PKEY_IsDefaultNonOwnerSaveLocation" },
+  { PKEY_IsDefaultSaveLocation, L"PKEY_IsDefaultSaveLocation" },
+  { PKEY_IsDeleted, L"PKEY_IsDeleted" },
+  { PKEY_IsEncrypted, L"PKEY_IsEncrypted" },
+  { PKEY_IsFlagged, L"PKEY_IsFlagged" },
+  { PKEY_IsFlaggedComplete, L"PKEY_IsFlaggedComplete" },
+  { PKEY_IsIncomplete, L"PKEY_IsIncomplete" },
+  { PKEY_IsLocationSupported, L"PKEY_IsLocationSupported" },
+  { PKEY_IsPinnedToNameSpaceTree, L"PKEY_IsPinnedToNameSpaceTree" },
+  { PKEY_IsRead, L"PKEY_IsRead" },
+  { PKEY_IsSearchOnlyItem, L"PKEY_IsSearchOnlyItem" },
+  { PKEY_IsSendToTarget, L"PKEY_IsSendToTarget" },
+  { PKEY_IsShared, L"PKEY_IsShared" },
+  { PKEY_ItemAuthors, L"PKEY_ItemAuthors" },
+  { PKEY_ItemClassType, L"PKEY_ItemClassType" },
+  { PKEY_ItemDate, L"PKEY_ItemDate" },
+  { PKEY_ItemFolderNameDisplay, L"PKEY_ItemFolderNameDisplay" },
+  { PKEY_ItemFolderPathDisplay, L"PKEY_ItemFolderPathDisplay" },
+  { PKEY_ItemFolderPathDisplayNarrow, L"PKEY_ItemFolderPathDisplayNarrow" },
+  { PKEY_ItemName, L"PKEY_ItemName" },
+  { PKEY_ItemNameDisplay, L"PKEY_ItemNameDisplay" },
+  { PKEY_ItemNamePrefix, L"PKEY_ItemNamePrefix" },
+  { PKEY_ItemParticipants, L"PKEY_ItemParticipants" },
+  { PKEY_ItemPathDisplay, L"PKEY_ItemPathDisplay" },
+  { PKEY_ItemPathDisplayNarrow, L"PKEY_ItemPathDisplayNarrow" },
+  { PKEY_ItemType, L"PKEY_ItemType" },
+  { PKEY_ItemTypeText, L"PKEY_ItemTypeText" },
+  { PKEY_ItemUrl, L"PKEY_ItemUrl" },
+  { PKEY_Keywords, L"PKEY_Keywords" },
+  { PKEY_Kind, L"PKEY_Kind" },
+  { PKEY_KindText, L"PKEY_KindText" },
+  { PKEY_Language, L"PKEY_Language" },
+  { PKEY_MileageInformation, L"PKEY_MileageInformation" },
+  { PKEY_MIMEType, L"PKEY_MIMEType" },
+  { PKEY_Null, L"PKEY_Null" },
+  { PKEY_OfflineAvailability, L"PKEY_OfflineAvailability" },
+  { PKEY_OfflineStatus, L"PKEY_OfflineStatus" },
+  { PKEY_OriginalFileName, L"PKEY_OriginalFileName" },
+  { PKEY_OwnerSID, L"PKEY_OwnerSID" },
+  { PKEY_ParentalRating, L"PKEY_ParentalRating" },
+  { PKEY_ParentalRatingReason, L"PKEY_ParentalRatingReason" },
+  { PKEY_ParentalRatingsOrganization, L"PKEY_ParentalRatingsOrganization" },
+  { PKEY_ParsingBindContext, L"PKEY_ParsingBindContext" },
+  { PKEY_ParsingName, L"PKEY_ParsingName" },
+  { PKEY_ParsingPath, L"PKEY_ParsingPath" },
+  { PKEY_PerceivedType, L"PKEY_PerceivedType" },
+  { PKEY_PercentFull, L"PKEY_PercentFull" },
+  { PKEY_Priority, L"PKEY_Priority" },
+  { PKEY_PriorityText, L"PKEY_PriorityText" },
+  { PKEY_Project, L"PKEY_Project" },
+  { PKEY_ProviderItemID, L"PKEY_ProviderItemID" },
+  { PKEY_Rating, L"PKEY_Rating" },
+  { PKEY_RatingText, L"PKEY_RatingText" },
+  { PKEY_Sensitivity, L"PKEY_Sensitivity" },
+  { PKEY_SensitivityText, L"PKEY_SensitivityText" },
+  { PKEY_SFGAOFlags, L"PKEY_SFGAOFlags" },
+  { PKEY_SharedWith, L"PKEY_SharedWith" },
+  { PKEY_ShareUserRating, L"PKEY_ShareUserRating" },
+  { PKEY_SharingStatus, L"PKEY_SharingStatus" },
+  { PKEY_Shell_OmitFromView, L"PKEY_Shell_OmitFromView" },
+  { PKEY_SimpleRating, L"PKEY_SimpleRating" },
+  { PKEY_Size, L"PKEY_Size" },
+  { PKEY_SoftwareUsed, L"PKEY_SoftwareUsed" },
+  { PKEY_SourceItem, L"PKEY_SourceItem" },
+  { PKEY_StartDate, L"PKEY_StartDate" },
+  { PKEY_Status, L"PKEY_Status" },
+  { PKEY_Subject, L"PKEY_Subject" },
+  { PKEY_Thumbnail, L"PKEY_Thumbnail" },
+  { PKEY_ThumbnailCacheId, L"PKEY_ThumbnailCacheId" },
+  { PKEY_ThumbnailStream, L"PKEY_ThumbnailStream" },
+  { PKEY_Title, L"PKEY_Title" },
+  { PKEY_TotalFileSize, L"PKEY_TotalFileSize" },
+  { PKEY_Trademarks, L"PKEY_Trademarks" },
+  { PKEY_Device_PrinterURL, L"PKEY_Device_PrinterURL" },
+  { PKEY_DeviceInterface_PrinterDriverDirectory, L"PKEY_DeviceInterface_PrinterDriverDirectory" },
+  { PKEY_DeviceInterface_PrinterDriverName, L"PKEY_DeviceInterface_PrinterDriverName" },
+  { PKEY_DeviceInterface_PrinterName, L"PKEY_DeviceInterface_PrinterName" },
+  { PKEY_DeviceInterface_PrinterPortName, L"PKEY_DeviceInterface_PrinterPortName" },
+  { PKEY_Devices_BatteryLife, L"PKEY_Devices_BatteryLife" },
+  { PKEY_Devices_BatteryPlusCharging, L"PKEY_Devices_BatteryPlusCharging" },
+  { PKEY_Devices_BatteryPlusChargingText, L"PKEY_Devices_BatteryPlusChargingText" },
+  { PKEY_Devices_Category_Desc_Singular, L"PKEY_Devices_Category_Desc_Singular" },
+  { PKEY_Devices_CategoryGroup_Desc, L"PKEY_Devices_CategoryGroup_Desc" },
+  { PKEY_Devices_Category_Desc_Plural, L"PKEY_Devices_Category_Desc_Plural" },
+  { PKEY_Devices_ChargingState, L"PKEY_Devices_ChargingState" },
+  { PKEY_Devices_IsConnected, L"PKEY_Devices_IsConnected" },
+  { PKEY_Devices_ContainerId, L"PKEY_Devices_ContainerId" },
+  { PKEY_Devices_DefaultTooltip, L"PKEY_Devices_DefaultTooltip" },
+  { PKEY_Devices_DeviceDescription1, L"PKEY_Devices_DeviceDescription1" },
+  { PKEY_Devices_DeviceDescription2, L"PKEY_Devices_DeviceDescription2" },
+  { PKEY_Devices_DiscoveryMethod, L"PKEY_Devices_DiscoveryMethod" },
+  { PKEY_Devices_FriendlyName, L"PKEY_Devices_FriendlyName" },
+  { PKEY_Devices_FunctionPaths, L"PKEY_Devices_FunctionPaths" },
+  { PKEY_Devices_InterfacePaths, L"PKEY_Devices_InterfacePaths" },
+  { PKEY_Devices_IsDefaultDevice, L"PKEY_Devices_IsDefaultDevice" },
+  { PKEY_Devices_IsNetworkDevice, L"PKEY_Devices_IsNetworkDevice" },
+  { PKEY_Devices_IsSharedDevice, L"PKEY_Devices_IsSharedDevice" },
+  { PKEY_Devices_IsSoftwareInstalling, L"PKEY_Devices_IsSoftwareInstalling" },
+  { PKEY_Devices_LaunchDeviceStageFromExplorer, L"PKEY_Devices_LaunchDeviceStageFromExplorer" },
+  { PKEY_Devices_IsLocalMachine, L"PKEY_Devices_IsLocalMachine" },
+  { PKEY_Devices_Manufacturer, L"PKEY_Devices_Manufacturer" },
+  { PKEY_Devices_MissedCalls, L"PKEY_Devices_MissedCalls" },
+  { PKEY_Devices_ModelName, L"PKEY_Devices_ModelName" },
+  { PKEY_Devices_ModelNumber, L"PKEY_Devices_ModelNumber" },
+  { PKEY_Devices_NetworkedTooltip, L"PKEY_Devices_NetworkedTooltip" },
+  { PKEY_Devices_NetworkName, L"PKEY_Devices_NetworkName" },
+  { PKEY_Devices_NetworkType, L"PKEY_Devices_NetworkType" },
+  { PKEY_Devices_NewPictures, L"PKEY_Devices_NewPictures" },
+  { PKEY_Devices_Notification, L"PKEY_Devices_Notification" },
+  { PKEY_Devices_Notification_LowBattery, L"PKEY_Devices_Notification_LowBattery" },
+  { PKEY_Devices_Notification_MissedCall, L"PKEY_Devices_Notification_MissedCall" },
+  { PKEY_Devices_Notification_NewMessage, L"PKEY_Devices_Notification_NewMessage" },
+  { PKEY_Devices_Notification_NewVoicemail, L"PKEY_Devices_Notification_NewVoicemail" },
+  { PKEY_Devices_Notification_StorageFull, L"PKEY_Devices_Notification_StorageFull" },
+  { PKEY_Devices_Notification_StorageFullLinkText, L"PKEY_Devices_Notification_StorageFullLinkText" },
+  { PKEY_Devices_NotificationStore, L"PKEY_Devices_NotificationStore" },
+  { PKEY_Devices_IsNotWorkingProperly, L"PKEY_Devices_IsNotWorkingProperly" },
+  { PKEY_Devices_IsPaired, L"PKEY_Devices_IsPaired" },
+  { PKEY_Devices_PrimaryCategory, L"PKEY_Devices_PrimaryCategory" },
+  { PKEY_Devices_Roaming, L"PKEY_Devices_Roaming" },
+  { PKEY_Devices_SafeRemovalRequired, L"PKEY_Devices_SafeRemovalRequired" },
+  { PKEY_Devices_SharedTooltip, L"PKEY_Devices_SharedTooltip" },
+  { PKEY_Devices_SignalStrength, L"PKEY_Devices_SignalStrength" },
+  { PKEY_Devices_Status1, L"PKEY_Devices_Status1" },
+  { PKEY_Devices_Status2, L"PKEY_Devices_Status2" },
+  { PKEY_Devices_StorageCapacity, L"PKEY_Devices_StorageCapacity" },
+  { PKEY_Devices_StorageFreeSpace, L"PKEY_Devices_StorageFreeSpace" },
+  { PKEY_Devices_StorageFreeSpacePercent, L"PKEY_Devices_StorageFreeSpacePercent" },
+  { PKEY_Devices_TextMessages, L"PKEY_Devices_TextMessages" },
+  { PKEY_Devices_Voicemail, L"PKEY_Devices_Voicemail" },
+  { PKEY_Document_ByteCount, L"PKEY_Document_ByteCount" },
+  { PKEY_Document_CharacterCount, L"PKEY_Document_CharacterCount" },
+  { PKEY_Document_ClientID, L"PKEY_Document_ClientID" },
+  { PKEY_Document_Contributor, L"PKEY_Document_Contributor" },
+  { PKEY_Document_DateCreated, L"PKEY_Document_DateCreated" },
+  { PKEY_Document_DatePrinted, L"PKEY_Document_DatePrinted" },
+  { PKEY_Document_DateSaved, L"PKEY_Document_DateSaved" },
+  { PKEY_Document_Division, L"PKEY_Document_Division" },
+  { PKEY_Document_DocumentID, L"PKEY_Document_DocumentID" },
+  { PKEY_Document_HiddenSlideCount, L"PKEY_Document_HiddenSlideCount" },
+  { PKEY_Document_LastAuthor, L"PKEY_Document_LastAuthor" },
+  { PKEY_Document_LineCount, L"PKEY_Document_LineCount" },
+  { PKEY_Document_Manager, L"PKEY_Document_Manager" },
+  { PKEY_Document_MultimediaClipCount, L"PKEY_Document_MultimediaClipCount" },
+  { PKEY_Document_NoteCount, L"PKEY_Document_NoteCount" },
+  { PKEY_Document_PageCount, L"PKEY_Document_PageCount" },
+  { PKEY_Document_ParagraphCount, L"PKEY_Document_ParagraphCount" },
+  { PKEY_Document_PresentationFormat, L"PKEY_Document_PresentationFormat" },
+  { PKEY_Document_RevisionNumber, L"PKEY_Document_RevisionNumber" },
+  { PKEY_Document_Security, L"PKEY_Document_Security" },
+  { PKEY_Document_SlideCount, L"PKEY_Document_SlideCount" },
+  { PKEY_Document_Template, L"PKEY_Document_Template" },
+  { PKEY_Document_TotalEditingTime, L"PKEY_Document_TotalEditingTime" },
+  { PKEY_Document_Version, L"PKEY_Document_Version" },
+  { PKEY_Document_WordCount, L"PKEY_Document_WordCount" },
+  { PKEY_DRM_DatePlayExpires, L"PKEY_DRM_DatePlayExpires" },
+  { PKEY_DRM_DatePlayStarts, L"PKEY_DRM_DatePlayStarts" },
+  { PKEY_DRM_Description, L"PKEY_DRM_Description" },
+  { PKEY_DRM_IsProtected, L"PKEY_DRM_IsProtected" },
+  { PKEY_DRM_PlayCount, L"PKEY_DRM_PlayCount" },
+  { PKEY_GPS_Altitude, L"PKEY_GPS_Altitude" },
+  { PKEY_GPS_AltitudeDenominator, L"PKEY_GPS_AltitudeDenominator" },
+  { PKEY_GPS_AltitudeNumerator, L"PKEY_GPS_AltitudeNumerator" },
+  { PKEY_GPS_AltitudeRef, L"PKEY_GPS_AltitudeRef" },
+  { PKEY_GPS_AreaInformation, L"PKEY_GPS_AreaInformation" },
+  { PKEY_GPS_Date, L"PKEY_GPS_Date" },
+  { PKEY_GPS_DestBearing, L"PKEY_GPS_DestBearing" },
+  { PKEY_GPS_DestBearingDenominator, L"PKEY_GPS_DestBearingDenominator" },
+  { PKEY_GPS_DestBearingNumerator, L"PKEY_GPS_DestBearingNumerator" },
+  { PKEY_GPS_DestBearingRef, L"PKEY_GPS_DestBearingRef" },
+  { PKEY_GPS_DestDistance, L"PKEY_GPS_DestDistance" },
+  { PKEY_GPS_DestDistanceDenominator, L"PKEY_GPS_DestDistanceDenominator" },
+  { PKEY_GPS_DestDistanceNumerator, L"PKEY_GPS_DestDistanceNumerator" },
+  { PKEY_GPS_DestDistanceRef, L"PKEY_GPS_DestDistanceRef" },
+  { PKEY_GPS_DestLatitude, L"PKEY_GPS_DestLatitude" },
+  { PKEY_GPS_DestLatitudeDenominator, L"PKEY_GPS_DestLatitudeDenominator" },
+  { PKEY_GPS_DestLatitudeNumerator, L"PKEY_GPS_DestLatitudeNumerator" },
+  { PKEY_GPS_DestLatitudeRef, L"PKEY_GPS_DestLatitudeRef" },
+  { PKEY_GPS_DestLongitude, L"PKEY_GPS_DestLongitude" },
+  { PKEY_GPS_DestLongitudeDenominator, L"PKEY_GPS_DestLongitudeDenominator" },
+  { PKEY_GPS_DestLongitudeNumerator, L"PKEY_GPS_DestLongitudeNumerator" },
+  { PKEY_GPS_DestLongitudeRef, L"PKEY_GPS_DestLongitudeRef" },
+  { PKEY_GPS_Differential, L"PKEY_GPS_Differential" },
+  { PKEY_GPS_DOP, L"PKEY_GPS_DOP" },
+  { PKEY_GPS_DOPDenominator, L"PKEY_GPS_DOPDenominator" },
+  { PKEY_GPS_DOPNumerator, L"PKEY_GPS_DOPNumerator" },
+  { PKEY_GPS_ImgDirection, L"PKEY_GPS_ImgDirection" },
+  { PKEY_GPS_ImgDirectionDenominator, L"PKEY_GPS_ImgDirectionDenominator" },
+  { PKEY_GPS_ImgDirectionNumerator, L"PKEY_GPS_ImgDirectionNumerator" },
+  { PKEY_GPS_ImgDirectionRef, L"PKEY_GPS_ImgDirectionRef" },
+  { PKEY_GPS_Latitude, L"PKEY_GPS_Latitude" },
+  { PKEY_GPS_LatitudeDenominator, L"PKEY_GPS_LatitudeDenominator" },
+  { PKEY_GPS_LatitudeNumerator, L"PKEY_GPS_LatitudeNumerator" },
+  { PKEY_GPS_LatitudeRef, L"PKEY_GPS_LatitudeRef" },
+  { PKEY_GPS_Longitude, L"PKEY_GPS_Longitude" },
+  { PKEY_GPS_LongitudeDenominator, L"PKEY_GPS_LongitudeDenominator" },
+  { PKEY_GPS_LongitudeNumerator, L"PKEY_GPS_LongitudeNumerator" },
+  { PKEY_GPS_LongitudeRef, L"PKEY_GPS_LongitudeRef" },
+  { PKEY_GPS_MapDatum, L"PKEY_GPS_MapDatum" },
+  { PKEY_GPS_MeasureMode, L"PKEY_GPS_MeasureMode" },
+  { PKEY_GPS_ProcessingMethod, L"PKEY_GPS_ProcessingMethod" },
+  { PKEY_GPS_Satellites, L"PKEY_GPS_Satellites" },
+  { PKEY_GPS_Speed, L"PKEY_GPS_Speed" },
+  { PKEY_GPS_SpeedDenominator, L"PKEY_GPS_SpeedDenominator" },
+  { PKEY_GPS_SpeedNumerator, L"PKEY_GPS_SpeedNumerator" },
+  { PKEY_GPS_SpeedRef, L"PKEY_GPS_SpeedRef" },
+  { PKEY_GPS_Status, L"PKEY_GPS_Status" },
+  { PKEY_GPS_Track, L"PKEY_GPS_Track" },
+  { PKEY_GPS_TrackDenominator, L"PKEY_GPS_TrackDenominator" },
+  { PKEY_GPS_TrackNumerator, L"PKEY_GPS_TrackNumerator" },
+  { PKEY_GPS_TrackRef, L"PKEY_GPS_TrackRef" },
+  { PKEY_GPS_VersionID, L"PKEY_GPS_VersionID" },
+  { PKEY_Image_BitDepth, L"PKEY_Image_BitDepth" },
+  { PKEY_Image_ColorSpace, L"PKEY_Image_ColorSpace" },
+  { PKEY_Image_CompressedBitsPerPixel, L"PKEY_Image_CompressedBitsPerPixel" },
+  { PKEY_Image_CompressedBitsPerPixelDenominator, L"PKEY_Image_CompressedBitsPerPixelDenominator" },
+  { PKEY_Image_CompressedBitsPerPixelNumerator, L"PKEY_Image_CompressedBitsPerPixelNumerator" },
+  { PKEY_Image_Compression, L"PKEY_Image_Compression" },
+  { PKEY_Image_CompressionText, L"PKEY_Image_CompressionText" },
+  { PKEY_Image_Dimensions, L"PKEY_Image_Dimensions" },
+  { PKEY_Image_HorizontalResolution, L"PKEY_Image_HorizontalResolution" },
+  { PKEY_Image_HorizontalSize, L"PKEY_Image_HorizontalSize" },
+  { PKEY_Image_ImageID, L"PKEY_Image_ImageID" },
+  { PKEY_Image_ResolutionUnit, L"PKEY_Image_ResolutionUnit" },
+  { PKEY_Image_VerticalResolution, L"PKEY_Image_VerticalResolution" },
+  { PKEY_Image_VerticalSize, L"PKEY_Image_VerticalSize" },
+  { PKEY_Journal_Contacts, L"PKEY_Journal_Contacts" },
+  { PKEY_Journal_EntryType, L"PKEY_Journal_EntryType" },
+  { PKEY_LayoutPattern_ContentViewModeForBrowse, L"PKEY_LayoutPattern_ContentViewModeForBrowse" },
+  { PKEY_LayoutPattern_ContentViewModeForSearch, L"PKEY_LayoutPattern_ContentViewModeForSearch" },
+  { PKEY_Link_Arguments, L"PKEY_Link_Arguments" },
+  { PKEY_Link_Comment, L"PKEY_Link_Comment" },
+  { PKEY_Link_DateVisited, L"PKEY_Link_DateVisited" },
+  { PKEY_Link_Description, L"PKEY_Link_Description" },
+  { PKEY_Link_Status, L"PKEY_Link_Status" },
+  { PKEY_Link_TargetExtension, L"PKEY_Link_TargetExtension" },
+  { PKEY_Link_TargetParsingPath, L"PKEY_Link_TargetParsingPath" },
+  { PKEY_Link_TargetSFGAOFlags, L"PKEY_Link_TargetSFGAOFlags" },
+  { PKEY_Media_AuthorUrl, L"PKEY_Media_AuthorUrl" },
+  { PKEY_Media_AverageLevel, L"PKEY_Media_AverageLevel" },
+  { PKEY_Media_ClassPrimaryID, L"PKEY_Media_ClassPrimaryID" },
+  { PKEY_Media_ClassSecondaryID, L"PKEY_Media_ClassSecondaryID" },
+  { PKEY_Media_CollectionGroupID, L"PKEY_Media_CollectionGroupID" },
+  { PKEY_Media_CollectionID, L"PKEY_Media_CollectionID" },
+  { PKEY_Media_ContentDistributor, L"PKEY_Media_ContentDistributor" },
+  { PKEY_Media_ContentID, L"PKEY_Media_ContentID" },
+  { PKEY_Media_CreatorApplication, L"PKEY_Media_CreatorApplication" },
+  { PKEY_Media_CreatorApplicationVersion, L"PKEY_Media_CreatorApplicationVersion" },
+  { PKEY_Media_DateEncoded, L"PKEY_Media_DateEncoded" },
+  { PKEY_Media_DateReleased, L"PKEY_Media_DateReleased" },
+  { PKEY_Media_Duration, L"PKEY_Media_Duration" },
+  { PKEY_Media_DVDID, L"PKEY_Media_DVDID" },
+  { PKEY_Media_EncodedBy, L"PKEY_Media_EncodedBy" },
+  { PKEY_Media_EncodingSettings, L"PKEY_Media_EncodingSettings" },
+  { PKEY_Media_FrameCount, L"PKEY_Media_FrameCount" },
+  { PKEY_Media_MCDI, L"PKEY_Media_MCDI" },
+  { PKEY_Media_MetadataContentProvider, L"PKEY_Media_MetadataContentProvider" },
+  { PKEY_Media_Producer, L"PKEY_Media_Producer" },
+  { PKEY_Media_PromotionUrl, L"PKEY_Media_PromotionUrl" },
+  { PKEY_Media_ProtectionType, L"PKEY_Media_ProtectionType" },
+  { PKEY_Media_ProviderRating, L"PKEY_Media_ProviderRating" },
+  { PKEY_Media_ProviderStyle, L"PKEY_Media_ProviderStyle" },
+  { PKEY_Media_Publisher, L"PKEY_Media_Publisher" },
+  { PKEY_Media_SubscriptionContentId, L"PKEY_Media_SubscriptionContentId" },
+  { PKEY_Media_SubTitle, L"PKEY_Media_SubTitle" },
+  { PKEY_Media_UniqueFileIdentifier, L"PKEY_Media_UniqueFileIdentifier" },
+  { PKEY_Media_UserNoAutoInfo, L"PKEY_Media_UserNoAutoInfo" },
+  { PKEY_Media_UserWebUrl, L"PKEY_Media_UserWebUrl" },
+  { PKEY_Media_Writer, L"PKEY_Media_Writer" },
+  { PKEY_Media_Year, L"PKEY_Media_Year" },
+  { PKEY_Message_AttachmentContents, L"PKEY_Message_AttachmentContents" },
+  { PKEY_Message_AttachmentNames, L"PKEY_Message_AttachmentNames" },
+  { PKEY_Message_BccAddress, L"PKEY_Message_BccAddress" },
+  { PKEY_Message_BccName, L"PKEY_Message_BccName" },
+  { PKEY_Message_CcAddress, L"PKEY_Message_CcAddress" },
+  { PKEY_Message_CcName, L"PKEY_Message_CcName" },
+  { PKEY_Message_ConversationID, L"PKEY_Message_ConversationID" },
+  { PKEY_Message_ConversationIndex, L"PKEY_Message_ConversationIndex" },
+  { PKEY_Message_DateReceived, L"PKEY_Message_DateReceived" },
+  { PKEY_Message_DateSent, L"PKEY_Message_DateSent" },
+  { PKEY_Message_Flags, L"PKEY_Message_Flags" },
+  { PKEY_Message_FromAddress, L"PKEY_Message_FromAddress" },
+  { PKEY_Message_FromName, L"PKEY_Message_FromName" },
+  { PKEY_Message_HasAttachments, L"PKEY_Message_HasAttachments" },
+  { PKEY_Message_IsFwdOrReply, L"PKEY_Message_IsFwdOrReply" },
+  { PKEY_Message_MessageClass, L"PKEY_Message_MessageClass" },
+  { PKEY_Message_ProofInProgress, L"PKEY_Message_ProofInProgress" },
+  { PKEY_Message_SenderAddress, L"PKEY_Message_SenderAddress" },
+  { PKEY_Message_SenderName, L"PKEY_Message_SenderName" },
+  { PKEY_Message_Store, L"PKEY_Message_Store" },
+  { PKEY_Message_ToAddress, L"PKEY_Message_ToAddress" },
+  { PKEY_Message_ToDoFlags, L"PKEY_Message_ToDoFlags" },
+  { PKEY_Message_ToDoTitle, L"PKEY_Message_ToDoTitle" },
+  { PKEY_Message_ToName, L"PKEY_Message_ToName" },
+  { PKEY_Music_AlbumArtist, L"PKEY_Music_AlbumArtist" },
+  { PKEY_Music_AlbumID, L"PKEY_Music_AlbumID" },
+  { PKEY_Music_AlbumTitle, L"PKEY_Music_AlbumTitle" },
+  { PKEY_Music_Artist, L"PKEY_Music_Artist" },
+  { PKEY_Music_BeatsPerMinute, L"PKEY_Music_BeatsPerMinute" },
+  { PKEY_Music_Composer, L"PKEY_Music_Composer" },
+  { PKEY_Music_Conductor, L"PKEY_Music_Conductor" },
+  { PKEY_Music_ContentGroupDescription, L"PKEY_Music_ContentGroupDescription" },
+  { PKEY_Music_DisplayArtist, L"PKEY_Music_DisplayArtist" },
+  { PKEY_Music_Genre, L"PKEY_Music_Genre" },
+  { PKEY_Music_InitialKey, L"PKEY_Music_InitialKey" },
+  { PKEY_Music_IsCompilation, L"PKEY_Music_IsCompilation" },
+  { PKEY_Music_Lyrics, L"PKEY_Music_Lyrics" },
+  { PKEY_Music_Mood, L"PKEY_Music_Mood" },
+  { PKEY_Music_PartOfSet, L"PKEY_Music_PartOfSet" },
+  { PKEY_Music_Period, L"PKEY_Music_Period" },
+  { PKEY_Music_SynchronizedLyrics, L"PKEY_Music_SynchronizedLyrics" },
+  { PKEY_Music_TrackNumber, L"PKEY_Music_TrackNumber" },
+  { PKEY_Note_Color, L"PKEY_Note_Color" },
+  { PKEY_Note_ColorText, L"PKEY_Note_ColorText" },
+  { PKEY_Photo_Aperture, L"PKEY_Photo_Aperture" },
+  { PKEY_Photo_ApertureDenominator, L"PKEY_Photo_ApertureDenominator" },
+  { PKEY_Photo_ApertureNumerator, L"PKEY_Photo_ApertureNumerator" },
+  { PKEY_Photo_Brightness, L"PKEY_Photo_Brightness" },
+  { PKEY_Photo_BrightnessDenominator, L"PKEY_Photo_BrightnessDenominator" },
+  { PKEY_Photo_BrightnessNumerator, L"PKEY_Photo_BrightnessNumerator" },
+  { PKEY_Photo_CameraManufacturer, L"PKEY_Photo_CameraManufacturer" },
+  { PKEY_Photo_CameraModel, L"PKEY_Photo_CameraModel" },
+  { PKEY_Photo_CameraSerialNumber, L"PKEY_Photo_CameraSerialNumber" },
+  { PKEY_Photo_Contrast, L"PKEY_Photo_Contrast" },
+  { PKEY_Photo_ContrastText, L"PKEY_Photo_ContrastText" },
+  { PKEY_Photo_DateTaken, L"PKEY_Photo_DateTaken" },
+  { PKEY_Photo_DigitalZoom, L"PKEY_Photo_DigitalZoom" },
+  { PKEY_Photo_DigitalZoomDenominator, L"PKEY_Photo_DigitalZoomDenominator" },
+  { PKEY_Photo_DigitalZoomNumerator, L"PKEY_Photo_DigitalZoomNumerator" },
+  { PKEY_Photo_Event, L"PKEY_Photo_Event" },
+  { PKEY_Photo_EXIFVersion, L"PKEY_Photo_EXIFVersion" },
+  { PKEY_Photo_ExposureBias, L"PKEY_Photo_ExposureBias" },
+  { PKEY_Photo_ExposureBiasDenominator, L"PKEY_Photo_ExposureBiasDenominator" },
+  { PKEY_Photo_ExposureBiasNumerator, L"PKEY_Photo_ExposureBiasNumerator" },
+  { PKEY_Photo_ExposureIndex, L"PKEY_Photo_ExposureIndex" },
+  { PKEY_Photo_ExposureIndexDenominator, L"PKEY_Photo_ExposureIndexDenominator" },
+  { PKEY_Photo_ExposureIndexNumerator, L"PKEY_Photo_ExposureIndexNumerator" },
+  { PKEY_Photo_ExposureProgram, L"PKEY_Photo_ExposureProgram" },
+  { PKEY_Photo_ExposureProgramText, L"PKEY_Photo_ExposureProgramText" },
+  { PKEY_Photo_ExposureTime, L"PKEY_Photo_ExposureTime" },
+  { PKEY_Photo_ExposureTimeDenominator, L"PKEY_Photo_ExposureTimeDenominator" },
+  { PKEY_Photo_ExposureTimeNumerator, L"PKEY_Photo_ExposureTimeNumerator" },
+  { PKEY_Photo_Flash, L"PKEY_Photo_Flash" },
+  { PKEY_Photo_FlashEnergy, L"PKEY_Photo_FlashEnergy" },
+  { PKEY_Photo_FlashEnergyDenominator, L"PKEY_Photo_FlashEnergyDenominator" },
+  { PKEY_Photo_FlashEnergyNumerator, L"PKEY_Photo_FlashEnergyNumerator" },
+  { PKEY_Photo_FlashManufacturer, L"PKEY_Photo_FlashManufacturer" },
+  { PKEY_Photo_FlashModel, L"PKEY_Photo_FlashModel" },
+  { PKEY_Photo_FlashText, L"PKEY_Photo_FlashText" },
+  { PKEY_Photo_FNumber, L"PKEY_Photo_FNumber" },
+  { PKEY_Photo_FNumberDenominator, L"PKEY_Photo_FNumberDenominator" },
+  { PKEY_Photo_FNumberNumerator, L"PKEY_Photo_FNumberNumerator" },
+  { PKEY_Photo_FocalLength, L"PKEY_Photo_FocalLength" },
+  { PKEY_Photo_FocalLengthDenominator, L"PKEY_Photo_FocalLengthDenominator" },
+  { PKEY_Photo_FocalLengthInFilm, L"PKEY_Photo_FocalLengthInFilm" },
+  { PKEY_Photo_FocalLengthNumerator, L"PKEY_Photo_FocalLengthNumerator" },
+  { PKEY_Photo_FocalPlaneXResolution, L"PKEY_Photo_FocalPlaneXResolution" },
+  { PKEY_Photo_FocalPlaneXResolutionDenominator, L"PKEY_Photo_FocalPlaneXResolutionDenominator" },
+  { PKEY_Photo_FocalPlaneXResolutionNumerator, L"PKEY_Photo_FocalPlaneXResolutionNumerator" },
+  { PKEY_Photo_FocalPlaneYResolution, L"PKEY_Photo_FocalPlaneYResolution" },
+  { PKEY_Photo_FocalPlaneYResolutionDenominator, L"PKEY_Photo_FocalPlaneYResolutionDenominator" },
+  { PKEY_Photo_FocalPlaneYResolutionNumerator, L"PKEY_Photo_FocalPlaneYResolutionNumerator" },
+  { PKEY_Photo_GainControl, L"PKEY_Photo_GainControl" },
+  { PKEY_Photo_GainControlDenominator, L"PKEY_Photo_GainControlDenominator" },
+  { PKEY_Photo_GainControlNumerator, L"PKEY_Photo_GainControlNumerator" },
+  { PKEY_Photo_GainControlText, L"PKEY_Photo_GainControlText" },
+  { PKEY_Photo_ISOSpeed, L"PKEY_Photo_ISOSpeed" },
+  { PKEY_Photo_LensManufacturer, L"PKEY_Photo_LensManufacturer" },
+  { PKEY_Photo_LensModel, L"PKEY_Photo_LensModel" },
+  { PKEY_Photo_LightSource, L"PKEY_Photo_LightSource" },
+  { PKEY_Photo_MakerNote, L"PKEY_Photo_MakerNote" },
+  { PKEY_Photo_MakerNoteOffset, L"PKEY_Photo_MakerNoteOffset" },
+  { PKEY_Photo_MaxAperture, L"PKEY_Photo_MaxAperture" },
+  { PKEY_Photo_MaxApertureDenominator, L"PKEY_Photo_MaxApertureDenominator" },
+  { PKEY_Photo_MaxApertureNumerator, L"PKEY_Photo_MaxApertureNumerator" },
+  { PKEY_Photo_MeteringMode, L"PKEY_Photo_MeteringMode" },
+  { PKEY_Photo_MeteringModeText, L"PKEY_Photo_MeteringModeText" },
+  { PKEY_Photo_Orientation, L"PKEY_Photo_Orientation" },
+  { PKEY_Photo_OrientationText, L"PKEY_Photo_OrientationText" },
+  { PKEY_Photo_PeopleNames, L"PKEY_Photo_PeopleNames" },
+  { PKEY_Photo_PhotometricInterpretation, L"PKEY_Photo_PhotometricInterpretation" },
+  { PKEY_Photo_PhotometricInterpretationText, L"PKEY_Photo_PhotometricInterpretationText" },
+  { PKEY_Photo_ProgramMode, L"PKEY_Photo_ProgramMode" },
+  { PKEY_Photo_ProgramModeText, L"PKEY_Photo_ProgramModeText" },
+  { PKEY_Photo_RelatedSoundFile, L"PKEY_Photo_RelatedSoundFile" },
+  { PKEY_Photo_Saturation, L"PKEY_Photo_Saturation" },
+  { PKEY_Photo_SaturationText, L"PKEY_Photo_SaturationText" },
+  { PKEY_Photo_Sharpness, L"PKEY_Photo_Sharpness" },
+  { PKEY_Photo_SharpnessText, L"PKEY_Photo_SharpnessText" },
+  { PKEY_Photo_ShutterSpeed, L"PKEY_Photo_ShutterSpeed" },
+  { PKEY_Photo_ShutterSpeedDenominator, L"PKEY_Photo_ShutterSpeedDenominator" },
+  { PKEY_Photo_ShutterSpeedNumerator, L"PKEY_Photo_ShutterSpeedNumerator" },
+  { PKEY_Photo_SubjectDistance, L"PKEY_Photo_SubjectDistance" },
+  { PKEY_Photo_SubjectDistanceDenominator, L"PKEY_Photo_SubjectDistanceDenominator" },
+  { PKEY_Photo_SubjectDistanceNumerator, L"PKEY_Photo_SubjectDistanceNumerator" },
+  { PKEY_Photo_TagViewAggregate, L"PKEY_Photo_TagViewAggregate" },
+  { PKEY_Photo_TranscodedForSync, L"PKEY_Photo_TranscodedForSync" },
+  { PKEY_Photo_WhiteBalance, L"PKEY_Photo_WhiteBalance" },
+  { PKEY_Photo_WhiteBalanceText, L"PKEY_Photo_WhiteBalanceText" },
+  { PKEY_PropGroup_Advanced, L"PKEY_PropGroup_Advanced" },
+  { PKEY_PropGroup_Audio, L"PKEY_PropGroup_Audio" },
+  { PKEY_PropGroup_Calendar, L"PKEY_PropGroup_Calendar" },
+  { PKEY_PropGroup_Camera, L"PKEY_PropGroup_Camera" },
+  { PKEY_PropGroup_Contact, L"PKEY_PropGroup_Contact" },
+  { PKEY_PropGroup_Content, L"PKEY_PropGroup_Content" },
+  { PKEY_PropGroup_Description, L"PKEY_PropGroup_Description" },
+  { PKEY_PropGroup_FileSystem, L"PKEY_PropGroup_FileSystem" },
+  { PKEY_PropGroup_General, L"PKEY_PropGroup_General" },
+  { PKEY_PropGroup_GPS, L"PKEY_PropGroup_GPS" },
+  { PKEY_PropGroup_Image, L"PKEY_PropGroup_Image" },
+  { PKEY_PropGroup_Media, L"PKEY_PropGroup_Media" },
+  { PKEY_PropGroup_MediaAdvanced, L"PKEY_PropGroup_MediaAdvanced" },
+  { PKEY_PropGroup_Message, L"PKEY_PropGroup_Message" },
+  { PKEY_PropGroup_Music, L"PKEY_PropGroup_Music" },
+  { PKEY_PropGroup_Origin, L"PKEY_PropGroup_Origin" },
+  { PKEY_PropGroup_PhotoAdvanced, L"PKEY_PropGroup_PhotoAdvanced" },
+  { PKEY_PropGroup_RecordedTV, L"PKEY_PropGroup_RecordedTV" },
+  { PKEY_PropGroup_Video, L"PKEY_PropGroup_Video" },
+  { PKEY_InfoTipText, L"PKEY_InfoTipText" },
+  { PKEY_PropList_ConflictPrompt, L"PKEY_PropList_ConflictPrompt" },
+  { PKEY_PropList_ContentViewModeForBrowse, L"PKEY_PropList_ContentViewModeForBrowse" },
+  { PKEY_PropList_ContentViewModeForSearch, L"PKEY_PropList_ContentViewModeForSearch" },
+  { PKEY_PropList_ExtendedTileInfo, L"PKEY_PropList_ExtendedTileInfo" },
+  { PKEY_PropList_FileOperationPrompt, L"PKEY_PropList_FileOperationPrompt" },
+  { PKEY_PropList_FullDetails, L"PKEY_PropList_FullDetails" },
+  { PKEY_PropList_InfoTip, L"PKEY_PropList_InfoTip" },
+  { PKEY_PropList_NonPersonal, L"PKEY_PropList_NonPersonal" },
+  { PKEY_PropList_PreviewDetails, L"PKEY_PropList_PreviewDetails" },
+  { PKEY_PropList_PreviewTitle, L"PKEY_PropList_PreviewTitle" },
+  { PKEY_PropList_QuickTip, L"PKEY_PropList_QuickTip" },
+  { PKEY_PropList_TileInfo, L"PKEY_PropList_TileInfo" },
+  { PKEY_PropList_XPDetailsPanel, L"PKEY_PropList_XPDetailsPanel" },
+  { PKEY_RecordedTV_ChannelNumber, L"PKEY_RecordedTV_ChannelNumber" },
+  { PKEY_RecordedTV_Credits, L"PKEY_RecordedTV_Credits" },
+  { PKEY_RecordedTV_DateContentExpires, L"PKEY_RecordedTV_DateContentExpires" },
+  { PKEY_RecordedTV_EpisodeName, L"PKEY_RecordedTV_EpisodeName" },
+  { PKEY_RecordedTV_IsATSCContent, L"PKEY_RecordedTV_IsATSCContent" },
+  { PKEY_RecordedTV_IsClosedCaptioningAvailable, L"PKEY_RecordedTV_IsClosedCaptioningAvailable" },
+  { PKEY_RecordedTV_IsDTVContent, L"PKEY_RecordedTV_IsDTVContent" },
+  { PKEY_RecordedTV_IsHDContent, L"PKEY_RecordedTV_IsHDContent" },
+  { PKEY_RecordedTV_IsRepeatBroadcast, L"PKEY_RecordedTV_IsRepeatBroadcast" },
+  { PKEY_RecordedTV_IsSAP, L"PKEY_RecordedTV_IsSAP" },
+  { PKEY_RecordedTV_NetworkAffiliation, L"PKEY_RecordedTV_NetworkAffiliation" },
+  { PKEY_RecordedTV_OriginalBroadcastDate, L"PKEY_RecordedTV_OriginalBroadcastDate" },
+  { PKEY_RecordedTV_ProgramDescription, L"PKEY_RecordedTV_ProgramDescription" },
+  { PKEY_RecordedTV_RecordingTime, L"PKEY_RecordedTV_RecordingTime" },
+  { PKEY_RecordedTV_StationCallSign, L"PKEY_RecordedTV_StationCallSign" },
+  { PKEY_RecordedTV_StationName, L"PKEY_RecordedTV_StationName" },
+  { PKEY_Search_AutoSummary, L"PKEY_Search_AutoSummary" },
+  { PKEY_Search_ContainerHash, L"PKEY_Search_ContainerHash" },
+  { PKEY_Search_Contents, L"PKEY_Search_Contents" },
+  { PKEY_Search_EntryID, L"PKEY_Search_EntryID" },
+  { PKEY_Search_ExtendedProperties, L"PKEY_Search_ExtendedProperties" },
+  { PKEY_Search_GatherTime, L"PKEY_Search_GatherTime" },
+  { PKEY_Search_HitCount, L"PKEY_Search_HitCount" },
+  { PKEY_Search_IsClosedDirectory, L"PKEY_Search_IsClosedDirectory" },
+  { PKEY_Search_IsFullyContained, L"PKEY_Search_IsFullyContained" },
+  { PKEY_Search_QueryFocusedSummary, L"PKEY_Search_QueryFocusedSummary" },
+  { PKEY_Search_QueryFocusedSummaryWithFallback, L"PKEY_Search_QueryFocusedSummaryWithFallback" },
+  { PKEY_Search_Rank, L"PKEY_Search_Rank" },
+  { PKEY_Search_Store, L"PKEY_Search_Store" },
+  { PKEY_Search_UrlToIndex, L"PKEY_Search_UrlToIndex" },
+  { PKEY_Search_UrlToIndexWithModificationTime, L"PKEY_Search_UrlToIndexWithModificationTime" },
+  { PKEY_DescriptionID, L"PKEY_DescriptionID" },
+  { PKEY_InternalName, L"PKEY_InternalName" },
+  { PKEY_Link_TargetSFGAOFlagsStrings, L"PKEY_Link_TargetSFGAOFlagsStrings" },
+  { PKEY_Link_TargetUrl, L"PKEY_Link_TargetUrl" },
+  { PKEY_NamespaceCLSID, L"PKEY_NamespaceCLSID" },
+  { PKEY_Shell_SFGAOFlagsStrings, L"PKEY_Shell_SFGAOFlagsStrings" },
+  { PKEY_AppUserModel_ExcludeFromShowInNewInstall, L"PKEY_AppUserModel_ExcludeFromShowInNewInstall" },
+  { PKEY_AppUserModel_ID, L"PKEY_AppUserModel_ID" },
+  { PKEY_AppUserModel_IsDestListSeparator, L"PKEY_AppUserModel_IsDestListSeparator" },
+  { PKEY_AppUserModel_PreventPinning, L"PKEY_AppUserModel_PreventPinning" },
+  { PKEY_AppUserModel_RelaunchCommand, L"PKEY_AppUserModel_RelaunchCommand" },
+  { PKEY_AppUserModel_RelaunchDisplayNameResource, L"PKEY_AppUserModel_RelaunchDisplayNameResource" },
+  { PKEY_AppUserModel_RelaunchIconResource, L"PKEY_AppUserModel_RelaunchIconResource" },
+  { PKEY_Software_DateLastUsed, L"PKEY_Software_DateLastUsed" },
+  { PKEY_Software_ProductName, L"PKEY_Software_ProductName" },
+  { PKEY_Sync_Comments, L"PKEY_Sync_Comments" },
+  { PKEY_Sync_ConflictDescription, L"PKEY_Sync_ConflictDescription" },
+  { PKEY_Sync_ConflictFirstLocation, L"PKEY_Sync_ConflictFirstLocation" },
+  { PKEY_Sync_ConflictSecondLocation, L"PKEY_Sync_ConflictSecondLocation" },
+  { PKEY_Sync_HandlerCollectionID, L"PKEY_Sync_HandlerCollectionID" },
+  { PKEY_Sync_HandlerID, L"PKEY_Sync_HandlerID" },
+  { PKEY_Sync_HandlerName, L"PKEY_Sync_HandlerName" },
+  { PKEY_Sync_HandlerType, L"PKEY_Sync_HandlerType" },
+  { PKEY_Sync_HandlerTypeLabel, L"PKEY_Sync_HandlerTypeLabel" },
+  { PKEY_Sync_ItemID, L"PKEY_Sync_ItemID" },
+  { PKEY_Sync_ItemName, L"PKEY_Sync_ItemName" },
+  { PKEY_Sync_ProgressPercentage, L"PKEY_Sync_ProgressPercentage" },
+  { PKEY_Sync_State, L"PKEY_Sync_State" },
+  { PKEY_Sync_Status, L"PKEY_Sync_Status" },
+  { PKEY_Task_BillingInformation, L"PKEY_Task_BillingInformation" },
+  { PKEY_Task_CompletionStatus, L"PKEY_Task_CompletionStatus" },
+  { PKEY_Task_Owner, L"PKEY_Task_Owner" },
+  { PKEY_Video_Compression, L"PKEY_Video_Compression" },
+  { PKEY_Video_Director, L"PKEY_Video_Director" },
+  { PKEY_Video_EncodingBitrate, L"PKEY_Video_EncodingBitrate" },
+  { PKEY_Video_FourCC, L"PKEY_Video_FourCC" },
+  { PKEY_Video_FrameHeight, L"PKEY_Video_FrameHeight" },
+  { PKEY_Video_FrameRate, L"PKEY_Video_FrameRate" },
+  { PKEY_Video_FrameWidth, L"PKEY_Video_FrameWidth" },
+  { PKEY_Video_HorizontalAspectRatio, L"PKEY_Video_HorizontalAspectRatio" },
+  { PKEY_Video_SampleSize, L"PKEY_Video_SampleSize" },
+  { PKEY_Video_StreamName, L"PKEY_Video_StreamName" },
+  { PKEY_Video_StreamNumber, L"PKEY_Video_StreamNumber" },
+  { PKEY_Video_TotalBitrate, L"PKEY_Video_TotalBitrate" },
+  { PKEY_Video_TranscodedForSync, L"PKEY_Video_TranscodedForSync" },
+  { PKEY_Video_VerticalAspectRatio, L"PKEY_Video_VerticalAspectRatio" },
+  { PKEY_Volume_FileSystem, L"PKEY_Volume_FileSystem" },
+  { PKEY_Volume_IsMappedDrive, L"PKEY_Volume_IsMappedDrive" },
+  { PKEY_Volume_IsRoot, L"PKEY_Volume_IsRoot" },
+//  { MFPKEY_SourceOpenMonitor, L"MFPKEY_SourceOpenMonitor" },
+  { MFPKEY_ASFMediaSource_ApproxSeek, L"MFPKEY_ASFMediaSource_ApproxSeek" },
+  { MFPKEY_ASFMediaSource_IterativeSeekIfNoIndex, L"MFPKEY_ASFMediaSource_IterativeSeekIfNoIndex" },
+  { MFPKEY_ASFMediaSource_IterativeSeek_Max_Count, L"MFPKEY_ASFMediaSource_IterativeSeek_Max_Count" },
+  { MFPKEY_ASFMediaSource_IterativeSeek_Tolerance_In_MilliSecond, L"MFPKEY_ASFMediaSource_IterativeSeek_Tolerance_In_MilliSecond" },
+  { MFPKEY_Content_DLNA_Profile_ID, L"MFPKEY_Content_DLNA_Profile_ID" },
+  { MFPKEY_MediaSource_DisableReadAhead, L"MFPKEY_MediaSource_DisableReadAhead" },
+};
+
+static DWORD size_known_pkeys = _countof( known_pkeys );
+
+bool is_known_pkey( PROPERTYKEY const&key, wchar_t *buf, size_t len ) {
+  for ( DWORD i = 0; i < size_known_pkeys; i++ ) {
+    if ( IsEqualGUID( key.fmtid, known_pkeys[ i ].propKey.fmtid ) && key.pid == known_pkeys[i].propKey.pid) {
+      StringCchCopy( buf, len, known_pkeys[ i ].lpstrName );
+      return true;
+    }
+  }
+  return false;
+}
+static struct tag_H264VLevel {
+  eAVEncH264VLevel h264VLevel;
+  LPCWSTR lpstrName;
+} h264_levels[] =
+{
+  { eAVEncH264VLevel1, L"eAVEncH264VLevel1" },
+  { eAVEncH264VLevel1_b, L"eAVEncH264VLevel1_b" },
+  { eAVEncH264VLevel1_1, L"eAVEncH264VLevel1_1" },
+  { eAVEncH264VLevel1_2, L"eAVEncH264VLevel1_2" },
+  { eAVEncH264VLevel1_3, L"eAVEncH264VLevel1_3" },
+  { eAVEncH264VLevel2, L"eAVEncH264VLevel2" },
+  { eAVEncH264VLevel2_1, L"eAVEncH264VLevel2_1" },
+  { eAVEncH264VLevel2_2, L"eAVEncH264VLevel2_2" },
+  { eAVEncH264VLevel3, L"eAVEncH264VLevel3" },
+  { eAVEncH264VLevel3_1, L"eAVEncH264VLevel3_1" },
+  { eAVEncH264VLevel3_2, L"eAVEncH264VLevel3_2" },
+  { eAVEncH264VLevel4, L"eAVEncH264VLevel4" },
+  { eAVEncH264VLevel4_1, L"eAVEncH264VLevel4_1" },
+  { eAVEncH264VLevel4_2, L"eAVEncH264VLevel4_2" },
+  { eAVEncH264VLevel5, L"eAVEncH264VLevel5" },
+  { eAVEncH264VLevel5_1, L"eAVEncH264VLevel5_1" },
+};
+
+static DWORD size_h264_levels = _countof( h264_levels );
+bool is_known_h264_level( eAVEncH264VLevel const&level, wchar_t *buf, size_t len ) {
+  for ( DWORD i = 0; i < size_h264_levels; i++ ) {
+    if ( level == h264_levels[i].h264VLevel ) {
+      StringCchCopy( buf, len, h264_levels[ i ].lpstrName );
+      return true;
+    }
+  }
+  return false;
+}
+
+static struct tag_H264VProfile {
+  eAVEncH264VProfile h264VProfile;
+  LPCWSTR lpstrName;
+} h264_profiles[] =
+{
+  { eAVEncH264VProfile_unknown, L"eAVEncH264VProfile_unknown" },
+  { eAVEncH264VProfile_Simple, L"eAVEncH264VProfile_Simple" },
+  { eAVEncH264VProfile_Base, L"eAVEncH264VProfile_Base" },
+  { eAVEncH264VProfile_Main, L"eAVEncH264VProfile_Main" },
+  { eAVEncH264VProfile_High, L"eAVEncH264VProfile_High" },
+  { eAVEncH264VProfile_422, L"eAVEncH264VProfile_422" },
+  { eAVEncH264VProfile_High10, L"eAVEncH264VProfile_High10" },
+  { eAVEncH264VProfile_444, L"eAVEncH264VProfile_444" },
+  { eAVEncH264VProfile_Extended, L"eAVEncH264VProfile_Extended" },
+};
+
+static DWORD size_h264_profiles = _countof( h264_profiles );
+bool is_known_h264_profile( eAVEncH264VProfile const&profile, wchar_t *buf, size_t len ) {
+  for ( DWORD i = 0; i < size_h264_profiles; i++ ) {
+    if ( profile == h264_profiles[ i ].h264VProfile ) {
+      StringCchCopy( buf, len, h264_profiles[ i ].lpstrName );
+      return true;
+    }
+  }
+  return false;
+}
+
+static struct tag_MFVIM {
+  MFVideoInterlaceMode mfVIM;
+  LPCWSTR lpstrName;
+} mfvims[] =
+{
+  { MFVideoInterlace_Unknown, L"MFVideoInterlace_Unknown" },
+  { MFVideoInterlace_Progressive, L"MFVideoInterlace_Progressive" },
+  { MFVideoInterlace_FieldInterleavedUpperFirst, L"MFVideoInterlace_FieldInterleavedUpperFirst" },
+  { MFVideoInterlace_FieldInterleavedLowerFirst, L"MFVideoInterlace_FieldInterleavedLowerFirst" },
+  { MFVideoInterlace_FieldSingleUpper, L"MFVideoInterlace_FieldSingleUpper" },
+  { MFVideoInterlace_FieldSingleLower, L"MFVideoInterlace_FieldSingleLower" },
+  { MFVideoInterlace_MixedInterlaceOrProgressive, L"MFVideoInterlace_MixedInterlaceOrProgressive" },
+  { MFVideoInterlace_Last, L"MFVideoInterlace_Last" },
+  { MFVideoInterlace_ForceDWORD, L"MFVideoInterlace_ForceDWORD" },
+};
+static DWORD size_mfvims = _countof( mfvims );
+bool is_known_mfvim( MFVideoInterlaceMode const&mvim, wchar_t *buf, size_t len ) {
+  for ( DWORD i = 0; i < size_mfvims; i++ ) {
+    if ( mvim == mfvims[ i ].mfVIM ) {
+      StringCchCopy( buf, len, mfvims[ i ].lpstrName );
+      return true;
+    }
+  }
+  return false;
+}

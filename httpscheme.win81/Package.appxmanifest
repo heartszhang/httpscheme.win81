@@ -40,6 +40,7 @@
       <InProcessServer>
         <Path>hls.httpschemeproxy.dll</Path>
         <ActivatableClass ActivatableClassId="hls.httpschemeproxy.HttpSchemeHandler" ThreadingModel="both" />
+        <ActivatableClass ActivatableClassId="hls.httpschemeproxy.ByteStreamProxyHandler" ThreadingModel="both" />
       </InProcessServer>
     </Extension>
   </Extensions>

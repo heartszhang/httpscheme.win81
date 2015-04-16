@@ -19,6 +19,7 @@
 
 #include <mfapi.h>
 #include <mfidl.h>
+#include <uuids.h>
 #include <mfreadwrite.h>
 
 #pragma comment(lib, "mf.lib")

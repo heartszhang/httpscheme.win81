@@ -8,11 +8,18 @@ import "Windows.Media.idl";
 namespace hls{namespace httpschemeproxy{
   interface Windows.Media.IMediaExtension;
   runtimeclass HttpSchemeHandler;
+  runtimeclass ByteStreamProxyHandler;
 
   [version(COMPONENT_VERSION)]
   [activatable(COMPONENT_VERSION)]
   runtimeclass HttpSchemeHandler{
     [default] interface Windows.Media.IMediaExtension;
-  }
+  };
+
+  [version(COMPONENT_VERSION)]
+  [activatable(COMPONENT_VERSION)]
+  runtimeclass ByteStreamProxyHandler{
+    [default] interface Windows.Media.IMediaExtension;
+  };
 }}
 

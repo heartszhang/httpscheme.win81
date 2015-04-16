@@ -10,12 +10,21 @@
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="httpschemehandler.cpp" />
+    <ClCompile Include="dump.cpp" />
+    <ClCompile Include="asynccallbackfunc.cpp" />
+    <ClCompile Include="bytestreamhandlerproxy.cpp" />
+    <ClCompile Include="bytestreamproxy.cpp" />
+    <ClCompile Include="mediasourceproxy.cpp" />
+    <ClCompile Include="uuids.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="httpschemehandler.h" />
     <ClInclude Include="hls.httpschemeproxy_h.h" />
+    <ClInclude Include="bytestreamhandlerproxy.h" />
+    <ClInclude Include="mediasourceproxy.h" />
+    <ClInclude Include="hls.httpschemeproxy.h" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="hls.httpschemeproxy.idl" />
