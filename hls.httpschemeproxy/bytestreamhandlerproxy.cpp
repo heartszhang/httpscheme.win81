@@ -34,8 +34,8 @@ HRESULT ByteStreamHandlerProxy::EndCreateObject(
   _Outptr_  IUnknown **ppObject ) {
   auto inner = InnerResultFromOuterAsyncResult( pResult );
   auto hr = resolver->EndCreateObjectFromByteStream( inner.Get(), pObjectType, ppObject );
-  dump( L"ByteStreamHandler EndCreateObject %p, type=%d\n", *ppObject, *pObjectType );
   if ( ok( hr ) && *pObjectType == MF_OBJECT_MEDIASOURCE ) {
+    dump( L"ByteStreamHandler EndCreateObject %p, type=MF_OBJECT_MEDIASOURCE\n", *ppObject );
     *ppObject = MakeMediaSourceProxy( *ppObject ).Detach();
   }
   return hr;

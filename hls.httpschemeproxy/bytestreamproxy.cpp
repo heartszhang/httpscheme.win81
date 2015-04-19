@@ -108,6 +108,6 @@ public://IMFByteStream
 auto MakeByteStreamProxy( IUnknown* inner )-> ComPtr<IUnknown> {
   ComPtr<IUnknown> v;
   MakeAndInitialize<ByteStreamProxy>( &v, inner );  // ignore return value;
+  inner->Release();
   return v;
 }
-

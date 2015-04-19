@@ -1,11 +1,11 @@
 #include "pch.h"
 #include "mediasourceproxy.h"
 #include "hls.httpschemeproxy.h"
-
 HRESULT MediaSourceProxy::GetCharacteristics(
-  /* [out] */ __RPC__out DWORD *pdwCharacteristics ) {
-  auto hr = source->GetCharacteristics( pdwCharacteristics );
-  dump(L"source get-char %x\n", *pdwCharacteristics);
+  /* [out] */ __RPC__out DWORD *chars ) {
+  auto hr = source->GetCharacteristics( chars );
+  if ( ok( hr ) )
+    dump_chars( *chars );
   return hr;
 }
 
@@ -65,17 +65,45 @@ HRESULT MediaSourceProxy::BeginGetEvent(
     /* [in] */ IMFAsyncCallback *pCallback,
     /* [in] */ IUnknown *punkState ) {
   auto hr = source->BeginGetEvent( pCallback, punkState );
-  dump( L"source begin-get-event\n" );
+//  dump( L"source begin-get-event\n" );
   return hr;
 }
 
+template<typename I>
+ComPtr<I> MediaEventGetValue(IMFMediaEvent*evt) {
+  PropVariant p;
+  ComPtr<I> v;
+  auto hr = evt->GetValue( &p );
+  if ( ok( hr ) && p.vt == VT_UNKNOWN )
+    p.punkVal->QueryInterface( v.ReleaseAndGetAddressOf() );
+  return v;
+}
 
 HRESULT MediaSourceProxy::EndGetEvent(
     /* [in] */ IMFAsyncResult *pResult,
     /* [annotation][out] */
     _Out_  IMFMediaEvent **ppEvent ) {
   auto hr = source->EndGetEvent( pResult, ppEvent );
-  dump( L"source end-get-event %p\n", *ppEvent );
+  MediaEventType met;
+  if ( ok( hr ) )
+    ( *ppEvent )->GetType( &met );
+  dump_met( L"source end-get-event %s\n", met );
+  if ( met != MENewStream )
+    return hr;
+  auto stream = MediaEventGetValue<IMFMediaStream>( *ppEvent );
+  if ( !stream )
+    return hr;
+
+  ComPtr<IMFMediaEvent> oute;
+  GUID xt = GUID_NULL ;
+  auto status = S_OK;
+  hr = ( *ppEvent )->GetExtendedType( &xt );
+  if (ok(hr)) hr = ( *ppEvent )->GetStatus( &status );
+  if (ok(hr)) hr = MFCreateMediaEvent( met, xt, status, &PropVariant( MakeMediaStreamProxy(stream.Get()).Get() ), &oute );
+  if ( ok( hr ) ) {
+    ( *ppEvent )->Release();
+    ( *ppEvent ) = oute.Detach();
+  }
   return hr;
 }
 
@@ -99,5 +127,6 @@ HRESULT MediaSourceProxy::RuntimeClassInitialize( IUnknown*src ) {
 auto MakeMediaSourceProxy( IUnknown* inner )-> ComPtr<IUnknown> {
   ComPtr<IUnknown> v;
   MakeAndInitialize<MediaSourceProxy>( &v, inner );  // ignore return value;
+  inner->Release();
   return v;
 }

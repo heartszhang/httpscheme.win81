@@ -16,6 +16,7 @@
     <ClCompile Include="bytestreamproxy.cpp" />
     <ClCompile Include="mediasourceproxy.cpp" />
     <ClCompile Include="uuids.cpp" />
+    <ClCompile Include="mediastreamproxy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />

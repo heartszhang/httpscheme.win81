@@ -4,9 +4,9 @@
 
 
  /* File created by MIDL compiler version 8.00.0603 */
-/* at Thu Apr 16 13:34:29 2015
+/* at Sun Apr 19 09:44:09 2015
  */
-/* Compiler settings for C:\Users\Hearts\AppData\Local\Temp\hls.httpschemeproxy.idl-ea0dc490:
+/* Compiler settings for C:\Users\Hearts\AppData\Local\Temp\hls.httpschemeproxy.idl-742fdab0:
     Oicf, W1, Zp8, env=Win64 (32b run), target_arch=AMD64 8.00.0603 
     protocol : dce , ms_ext, c_ext, robust
     error checks: allocation ref bounds_check enum stub_data 

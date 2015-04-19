@@ -93,6 +93,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <PackageCertificateKeyFile>httpscheme.win81_TemporaryKey.pfx</PackageCertificateKeyFile>
+    <PackageCertificateThumbprint>C929BD2F2FB217F149547022CDA80B0209A970F1</PackageCertificateThumbprint>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>

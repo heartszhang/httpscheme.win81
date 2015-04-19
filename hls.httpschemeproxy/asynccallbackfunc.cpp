@@ -34,6 +34,7 @@ ComPtr < IMFAsyncResult > InnerResultFromOuterAsyncResult( IMFAsyncResult *outer
   outer->GetObject( &obj );  // ignore return hr
 
   return Cast<IMFAsyncResult>( obj );
+//  return AsyncResultGetObject<IMFAsyncResult>(outer);
 }
 auto CreateAsyncCallbackProxy( IMFAsyncCallback* outercb, IUnknown*outerstat ) ->ComPtr<IMFAsyncCallback> {
   ComPtr<IMFAsyncCallback> outercbx( outercb );
