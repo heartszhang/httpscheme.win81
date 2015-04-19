@@ -17,7 +17,7 @@ public:
   }
   STDMETHODIMP RequestSample( IUnknown *pToken ) {
     auto hr = stream->RequestSample( pToken );
-    dump( L"media-stream request-sample\n" );
+//    dump( L"media-stream request-sample\n" );
     return hr;
   }
 
