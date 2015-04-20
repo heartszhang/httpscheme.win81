@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <map>
 #include <string>
 #include <cstdint>
 
@@ -7,63 +8,109 @@ namespace m3u8 {
 using uint = uint32_t;
 using string = std::wstring;
 using uint64 = uint64_t;
+using utf8string = std::string;
 
- struct media_segment{
-   string uri;  //absolute
- };
- struct media_playlist{
-   string uri;  //absolute
-   uint64 duration; //100 nano-secs
-   std::vector<media_segment> segments;
- }
+using params_t = std::map < utf8string, utf8string > ;
+//METHOD, URI, IV
+using xkey = params_t;
+
+struct token_reader {
+  int err;
+  int begin;
+  const utf8string &line;
+  utf8string token() {
+    utf8string n;
+    if ( err != 0 ) return n;
+    for ( ; begin < line.size(); begin++ ) {
+      if ( line[ begin ] != '=' )
+        n.push_back( line[ begin ] );
+    }
+    return n;
+  }
+  explicit token_reader(utf8string const&line) :line(line) {}
+  void expect_eq() {
+    if ( err != 0 )return;
+    if ( begin >= line.size() || line[begin] != '=') 
+      err = -2;   
+    ++begin;
+    return;
+  }
+  utf8string value() {
+    utf8string v;
+    if ( err != 0 ) return v;
+    if ( begin + 1 == line.size() || line[begin] == ',') {
+      ++begin;
+      return;
+    }
+    if ( line[ begin ] == '"' ) {
+      v = string_value();
+      return;
+    }
+    for ( ; begin < line.size() && line[begin] != ','; ++begin ) {
+      v.push_back( line[ begin ] );
+    }
+    if ( begin < line.size() ) ++begin;
+  }
+  utf8string string_value() {
+    utf8string v;
+    ++begin;
+    for ( ; begin < line.size(); ++begin ) {
+
+    }
+  }
+};
+//comma in attribute-value should be escaped, but we dont process it
+//AttributeName=AttributeValue,<AttributeName=AttributeValue>*
+params_t to_params( utf8string const&line ) {
+  params_t v;
+  token_reader reader( line );
+  while ( reader.err == 0 && reader.begin < line.size()) {
+    auto name = reader.token();
+    reader.expect_eq();
+    auto val = reader.value();
+    v[ name ] = val;
+  }
+  return v;
+}
+
+xkey decode_key(utf8string line){
+  return to_params(line);
+}
+
+// This structure represents a media segment included in a media playlist.
+// Media segment may be encrypted.
+struct media_segment {
+  uint64 seqno;
+  string title;         // optional second parameter for EXTINF tag
+  string uri;  //absolute
+  uint64 duration;      //nano-secs        // first parameter for EXTINF tag, integer or float
+  uint64  limit = 0-1ull;         // EXT-X-BYTERANGE <n> is length in bytes for the file under URI
+  uint64  offset = 0;        // EXT-X-BYTERANGE [@o] is offset from the start of the file under URI
+  xkey    key;           // EXT-X-KEY displayed before the segment and means changing of encryption key (in theory each segment may have own key)
+  bool   discontinuity = false;         // EXT-X-DISCONTINUITY indicates an encoding discontinuity between the media segment that follows it and the one that preceded it (i.e. file format, number and type of tracks, encoding parameters, encoding sequence, timestamp sequence)
+  //	time    programdatetime; // EXT-X-PROGRAM-DATE-TIME tag associates the first sample of a media segment with an absolute date and/or time
+};
+struct media_playlist{
+  uint64   duration;  //second -> 100nano-secs
+  uint64   seqno;     //EXT-X-MEDIA-SEQUENCE
+  bool     iframe;    // EXT-X-I-FRAMES-ONLY
+  bool     vod;    // vod or live else
+  bool     has_key;
+  bool     has_map;
+  uint     winsize;   // max number of segments displayed in an encoded playlist; need set to zero for VOD playlists
+  uint     count;     // number of segments added to the playlist
+  uint     ver;       // 
+  xkey     key;       // EXT-X-KEY is optional encryption key displayed before any segments (default key for the playlist)
+  string uri;  //absolute
+  std::vector<media_segment> segments;
+}
  struct master_playlist{
+   uint64     ver;
    string uri;
    uint64 duration;
    std::vector<media_playlist> medias;
  };
 
- auto decode(stream_reader *reader)->master_playlist;
-// It applies to every Media Segment that appears after it in the
-// Playlist until the next EXT-X-MAP tag or until the end of the
-// playlist.
-//
-// Realizes EXT-MAP tag.
-struct Map {
-  string uri;
-  int64  limit = 0;                 // <n> is length in bytes for the file under URI
-  int64  offset = 0;                // [@o] is offset from the start of the file under URI
-};
-
-// This structure represents information about stream encryption.
-//
-// Realizes EXT-X-KEY tag.
-struct Key {
-  string method;
-  string uri;
-  string iv;
-  string keyformat;
-  string keyformatversions;
-};
-
-// This structure represents a media segment included in a media playlist.
-// Media segment may be encrypted.
-// Widevine supports own tags for encryption metadata.
-struct MediaSegment {
-  uint64 seqid;
-  string title;         // optional second parameter for EXTINF tag
-  string uri;
-  uint64 duration;      //nano-secs        // first parameter for EXTINF tag, integer or float
-  int64  limit;         // EXT-X-BYTERANGE <n> is length in bytes for the file under URI
-  int64  offset;        // EXT-X-BYTERANGE [@o] is offset from the start of the file under URI
-  bool   has_key = false;
-  Key    key;           // EXT-X-KEY displayed before the segment and means changing of encryption key (in theory each segment may have own key)
-  bool   has_map = false;
-  Map    map  ;         // EXT-X-MAP displayed before the segment
-  bool   discontinuity = false;         // EXT-X-DISCONTINUITY indicates an encoding discontinuity between the media segment that follows it and the one that preceded it (i.e. file format, number and type of tracks, encoding parameters, encoding sequence, timestamp sequence)
-  //	time    programdatetime; // EXT-X-PROGRAM-DATE-TIME tag associates the first sample of a media segment with an absolute date and/or time
-};
-
- using Segments = std::vector<MediaSegment>;
 /*
 This structure represents a single bitrate playlist aka media playlist.
 It related to both a simple media playlists and a sliding window media playlists.
@@ -87,65 +134,7 @@ https://priv.example.com/fileSequence2681.ts
 #EXTINF:7.975,
 https://priv.example.com/fileSequence2682.ts
 */
-struct MediaPlaylist {
-  uint64   duration;  //second -> 100nano-secs
-  uint64   seqno;     //EXT-X-MEDIA-SEQUENCE
-  string   args;      // null terminated // optional arguments placed after URIs (URI?Args)
-  bool     iframe;    // EXT-X-I-FRAMES-ONLY
-  bool     closed;    // is this VOD (closed) or Live (sliding) playlist?
-  bool     is_vod = true;
-  bool     is_live = false;
-  bool     has_key;
-  bool     has_map;
-  int      keyformat; //aes-128?
-  uint     winsize;   // max number of segments displayed in an encoded playlist; need set to zero for VOD playlists
-  uint     capacity;  // total capacity of slice used for the playlist
-  uint     head;      // head of FIFO, we add segments to head  // for live
-  uint     tail;      // tail of FIFO, we remove segments from tail // for live
-  uint     count;     // number of segments added to the playlist
-  uint     ver;       // 
-  Key      key;       // EXT-X-KEY is optional encryption key displayed before any segments (default key for the playlist)
-  Map      map;       // EXT-X-MAP is optional tag specifies how to obtain the Media Initialization Section (default map for the playlist)
-  Segments segments;
-};
 
-// This structure represents EXT-X-MEDIA tag in variants.
-struct Alternative {
-  string groupid;
-  string uri;
-  string type;
-  string language;
-  string name;
-  bool   isdefault;
-  string autoselect;
-  string forced;
-  string characteristics;
-  string subtitles;
-};
- using Alternatives = std::vector<Alternative>;
-// This stucture represents additional parameters for a variant
-// used in EXT-X-STREAM-INF and EXT-X-I-FRAME-STREAM-INF
-struct VariantParams {
-  uint         programid;
-  uint         bandwidth;
-  string       codecs;
-  string       resolution;
-  string       audio;           // EXT-X-STREAM-INF only
-  string       video;
-  string       subtitles;       // EXT-X-STREAM-INF only
-  string       captions;        // EXT-X-STREAM-INF only
-  bool         iframe;          // EXT-X-I-FRAME-STREAM-INF
-  Alternatives alternatives;
-};
-
-// This structure represents variants for master playlist.
-// Variants included in a master playlist and point to media playlists.
- struct Variant : VariantParams{
-  string uri;
-  MediaPlaylist chunk;
-};
-
- using Variants = std::vector<Variant>;
 /*
 This structure represents a master playlist which combines media playlists for multiple bitrates.
 URI lines in the playlist identify media playlists.
@@ -227,7 +216,7 @@ struct extinf{
   uint64 duration = 0;
   string title;
 };
-//<duration>, <title>
+//#EXTINF:<duration>,<title> , duration is integer or float number in decimal, seconds
 extinf decode_inf(utf8string line){
   auto fields = string_split(line, ",");
   extinf v;
@@ -238,35 +227,33 @@ extinf decode_inf(utf8string line){
   }
   return v;
 }
-
+//#EXT-X-TARGETDURATION:<s>
 uint64 decode_target_duration(utf8string line){
   return to_uint64(line) * 10000;  //100 nano-secs
 }
-uint64 decode_media_sequence(utf8string line){
-  return to_uint64(line);
-}
-
-enum class xkey_method : uint{
-  xkey_method_nothing = 0,
-  xkey_method_none = 1,
-  xkey_method_aes128 = 2
+//offset == -1 means it isn't present
+struct byte_range{
+  uint64 bytes = 0ull;
+  uint64 offset = 0-1ull;
 };
-struct xkey{
-  xkey_method method = xkey_method_none;
-  std::vector<uint8_t> iv;
-  string uri;
-};
-xkey decode_key(utf8string line){
-  xkey v;
-  auto params = to_params(line);
-  if (params["METHOD"] == "AES-128"){
-    v.method = xkey_method_aes128;
-    v.iv = to_bytes(params["IV"]);
-    v.uri = params["URI"];
+// #EXT-X-BYTERANGE:<n>[@o]
+byte_range decode_byte_range(utf8string line){
+  byte_range v;
+  auto fields = string_split(line, "@");
+  if (fields.length() == 2){
+    v.offset = to_uint64(fields[1]);
+  }else if(fields.length() == 1){
+    v.bytes = to_uint64(fields[0]);
   }
   return v;
 }
 
+//#EXT-X-MEDIA-SEQUENCE:<number>
+uint64 decode_media_sequence(utf8string line){
+  return to_uint64(line);
+}
+
+// #EXT-X-PROGRAM-DATE-TIME:<YYYY-MM-DDThh:mm:ssZ>
 uint64 decode_program_datetime(utf8string line){
   return to_unixtime(line);
 }
@@ -275,27 +262,15 @@ bool decode_yesno(utf8string line){
   return line == "YES";
 }
 
-enum class playlist_type : uint{
-  playlist_type_none = 0,
-  playlist_type_event = 1,
-  playlist_type_live = playlist_type_event,
-  playlist_type_vod = 2,
-};
-
+// #EXT-X-PLAYLIST-TYPE:<EVENT|VOD>
 playlist_type decode_playlist_type(utf8string line){
-  auto v = playlist_type::playlist_type_none;
-  if (line == "EVENT")
-    v = playlist_type::playlist_type_event;
-  if (line == "VOD")
-    v = playlist_type::playlist_type_vod;
-  return v;
+  return line;
 }
 
-struct xmedia{
-  string uri;
-  xmedia_type typ;
-  
-};
+using xmedia = std::map<utf8string,utf8string>;
+using xstream_inf = std::map<utf8string, utf8string>;
+using iframe_stream_inf = std::map<utf8string, utf8string>;
+
 auto m3u8::decode_playlist(stream_reader*reader)->master_playlist{
   const char *t = nullptr;
   m3u8stack ctx;
@@ -305,12 +280,15 @@ auto m3u8::decode_playlist(stream_reader*reader)->master_playlist{
     if (is_blank(line))continue;
     if (line == "#EXTM3U"){
       ctx.m3u8 = true;
-    }else if(has_prefix(line, t = "#EXTINF:")){
+    }else if(has_prefix(line, t = "#EXTINF:")){//#EXTINF:<duration>,<title>
       ctx.is_media_list = true;
       ctx.inf = decode_inf(suffix(line, t));
     }else if(has_prefix(line, t = "#EXT-X-BYTERANGE:")){
       //      ctx.is_media_list = true;
-      ctx.target_duration = decode_target_duration(suffix(line, t));
+      auto br = decode_byte_range(suffix(line, t));
+      if (br.offset == 0-1ull){
+        br.offset = ctx.byte_range.offset + ctx.byte_range.bytes;
+      }
     }else if(has_prefix(line, t = "#EXT-X-TARGETDURATION:")){
       //      ctx.is_media_list = true;
       ctx.target_duration = decode_target_duration(suffix(line, t));
@@ -328,17 +306,17 @@ auto m3u8::decode_playlist(stream_reader*reader)->master_playlist{
     }else if(has_prefix(line, t = "#EXT-X-ENDLIST:")){
       ctx.end_list = true; // media-playlist 
     }else if(has_prefix(line, t = "#EXT-X-MEDIA:")){
-      ctx.media = decode_media(suffix(line, t));
+      ctx.medias.push_back(decode_params(suffix(line, t));
     }else if(has_prefix(line, t = "#EXT-X-STREAM-INF:")){
-      ctx.stream_inf = decode_stream_inf(suffix(line, t));
+      ctx.stream_inf = decode_params(suffix(line, t));
     }else if(has_prefix(line, t = "#EXT-X-DISCONTINUITY:")){
       ctx.discontinuity = true;
     }else if(has_prefix(line, t = "#EXT-X-I-FRAMES-ONLY:")){
       ctx.iframes_only = true;
     }else if(has_prefix(line, t = "#EXT-X-I-FRAMES-STREAM-INF:")){
-      ctx.iframe_inf = decode_iframe_stream_inf(suffix(line, t));
+      ctx.iframe_inf = decode_params(suffix(line, t));
     }else if(has_prefix(line, t = "#EXT-X-VERSION:")){
-      ctx.ver = decode_version(suffix(line, t));
+      ctx.ver = to_uint64(suffix(line, t));
     }else if(has_prefix(line, t = "#")){
     }else{
       //segment
@@ -364,5 +342,6 @@ auto m3u8::decode_playlist(stream_reader*reader)->master_playlist{
   if (ctx.is_media_list){
     ctx.master_playlist.medias.push_back(ctx.media_playlist);
   }
+ 
   return ctx.master_playlit;
 }
