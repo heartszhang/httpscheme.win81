@@ -26,7 +26,10 @@ MainPage::MainPage()
   InitializeComponent();
   memanager = ref new Windows::Media::MediaExtensionManager();
 //  memanager->RegisterSchemeHandler( L"hls.httpschemeproxy.HttpSchemeHandler", L"http:" );
-  memanager->RegisterByteStreamHandler( L"hls.httpschemeproxy.ByteStreamProxyHandler", L".ts", L"video/MP2T" );
-//  media_element->Source = ref new Uri(L"http://gslb.bestvcdn.com.cloudcdn.net/218.77.90.60/gslb/program/Dbackct_bestvcdn_comD/_9Xxr00bTIO_/FDN/FDNB1690862/700/stream.m3u8?_cp=1&_back=FASTWEB&taskID=pb02.idc.xbox.bestv.com.cn_1428984407481_023513000004901");
-  media_element->Source = ref new Uri( L"http://devimages.apple.com/iphone/samples/bipbop/gear1/fileSequence0.ts" );
+//  memanager->RegisterByteStreamHandler( L"hls.httpschemeproxy.ByteStreamProxyHandler", L".ts", L"video/MP2T" );
+  memanager->RegisterByteStreamHandler( L"hls.httpschemeproxy.ByteStreamProxyHandler", nullptr, L"application/x-mpegURL" );
+//  memanager->RegisterByteStreamHandler( L"hls.httpschemeproxy.ByteStreamProxyHandler", L".ts", L"video/MP2T" );
+//  memanager->RegisterByteStreamHandler( L"hls.httpschemeproxy.ByteStreamProxyHandler", L".ts", L"video/MP2T" );
+  media_element->Source = ref new Uri( L"http://gslb.bestvcdn.com.cloudcdn.net/218.77.90.60/gslb/program/Dbackct_bestvcdn_comD/_9Xxr00bTIO_/FDN/FDNB1690862/700/stream.m3u8?_cp=1&_back=FASTWEB&taskID=pb02.idc.xbox.bestv.com.cn_1428984407481_023513000004901" );
+//  media_element->Source = ref new Uri( L"http://devimages.apple.com/iphone/samples/bipbop/gear1/fileSequence0.ts" );
 }

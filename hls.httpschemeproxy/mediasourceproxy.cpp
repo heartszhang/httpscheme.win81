@@ -69,25 +69,15 @@ HRESULT MediaSourceProxy::BeginGetEvent(
   return hr;
 }
 
-template<typename I>
-ComPtr<I> MediaEventGetValue(IMFMediaEvent*evt) {
-  PropVariant p;
-  ComPtr<I> v;
-  auto hr = evt->GetValue( &p );
-  if ( ok( hr ) && p.vt == VT_UNKNOWN )
-    p.punkVal->QueryInterface( v.ReleaseAndGetAddressOf() );
-  return v;
-}
-
 HRESULT MediaSourceProxy::EndGetEvent(
     /* [in] */ IMFAsyncResult *pResult,
     /* [annotation][out] */
     _Out_  IMFMediaEvent **ppEvent ) {
   auto hr = source->EndGetEvent( pResult, ppEvent );
-  MediaEventType met;
+  MediaEventType met = MEUnknown;
   if ( ok( hr ) )
     ( *ppEvent )->GetType( &met );
-  dump_met( L"source end-get-event %s\n", met );
+  dump_met( L"media-source event %s\n", met );
   if ( met != MENewStream )
     return hr;
   auto stream = MediaEventGetValue<IMFMediaStream>( *ppEvent );
@@ -99,7 +89,8 @@ HRESULT MediaSourceProxy::EndGetEvent(
   auto status = S_OK;
   hr = ( *ppEvent )->GetExtendedType( &xt );
   if (ok(hr)) hr = ( *ppEvent )->GetStatus( &status );
-  if (ok(hr)) hr = MFCreateMediaEvent( met, xt, status, &PropVariant( MakeMediaStreamProxy(stream.Get()).Get() ), &oute );
+  PropVariant p( MakeMediaStreamProxy( stream.Get() ).Get() );
+  if (ok(hr)) hr = MFCreateMediaEvent( met, xt, status, &p, &oute );
   if ( ok( hr ) ) {
     ( *ppEvent )->Release();
     ( *ppEvent ) = oute.Detach();

@@ -4,9 +4,9 @@
 
 
  /* File created by MIDL compiler version 8.00.0603 */
-/* at Sun Apr 19 19:06:44 2015
+/* at Mon Apr 20 16:25:35 2015
  */
-/* Compiler settings for C:\Users\Hearts\AppData\Local\Temp\hls.httpschemeproxy.idl-9c1bbc2b:
+/* Compiler settings for C:\Users\Hearts\AppData\Local\Temp\hls.httpschemeproxy.idl-8e917800:
     Oicf, W1, Zp8, env=Win64 (32b run), target_arch=AMD64 8.00.0603 
     protocol : dce , ms_ext, c_ext, robust
     error checks: allocation ref bounds_check enum stub_data 
@@ -86,6 +86,15 @@ class ByteStreamProxyHandler;
 } /*hls*/
 }
 #endif
+#ifdef __cplusplus
+namespace ABI {
+namespace hls {
+namespace httpschemeproxy {
+class M3u8ByteStreamHandler;
+} /*httpschemeproxy*/
+} /*hls*/
+}
+#endif
 #ifndef RUNTIMECLASS_hls_httpschemeproxy_HttpSchemeHandler_DEFINED
 #define RUNTIMECLASS_hls_httpschemeproxy_HttpSchemeHandler_DEFINED
 extern const __declspec(selectany) _Null_terminated_ WCHAR RuntimeClass_hls_httpschemeproxy_HttpSchemeHandler[] = L"hls.httpschemeproxy.HttpSchemeHandler";
@@ -93,6 +102,10 @@ extern const __declspec(selectany) _Null_terminated_ WCHAR RuntimeClass_hls_http
 #ifndef RUNTIMECLASS_hls_httpschemeproxy_ByteStreamProxyHandler_DEFINED
 #define RUNTIMECLASS_hls_httpschemeproxy_ByteStreamProxyHandler_DEFINED
 extern const __declspec(selectany) _Null_terminated_ WCHAR RuntimeClass_hls_httpschemeproxy_ByteStreamProxyHandler[] = L"hls.httpschemeproxy.ByteStreamProxyHandler";
+#endif
+#ifndef RUNTIMECLASS_hls_httpschemeproxy_M3u8ByteStreamHandler_DEFINED
+#define RUNTIMECLASS_hls_httpschemeproxy_M3u8ByteStreamHandler_DEFINED
+extern const __declspec(selectany) _Null_terminated_ WCHAR RuntimeClass_hls_httpschemeproxy_M3u8ByteStreamHandler[] = L"hls.httpschemeproxy.M3u8ByteStreamHandler";
 #endif
 
 

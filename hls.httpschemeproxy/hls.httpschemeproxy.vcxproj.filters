@@ -17,6 +17,8 @@
     <ClCompile Include="mediasourceproxy.cpp" />
     <ClCompile Include="uuids.cpp" />
     <ClCompile Include="mediastreamproxy.cpp" />
+    <ClCompile Include="m3u8bytestreamhandler.cpp" />
+    <ClCompile Include="m3u8mediasource.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -26,6 +28,9 @@
     <ClInclude Include="bytestreamhandlerproxy.h" />
     <ClInclude Include="mediasourceproxy.h" />
     <ClInclude Include="hls.httpschemeproxy.h" />
+    <ClInclude Include="m3u8bytestreamhandler.h" />
+    <ClInclude Include="m3u8mediasource.h" />
+    <ClInclude Include="mediaplaylist.h" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="hls.httpschemeproxy.idl" />

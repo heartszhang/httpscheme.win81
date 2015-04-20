@@ -166,6 +166,7 @@
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <CompileAsWinRT>false</CompileAsWinRT>
+      <WarningLevel>Level4</WarningLevel>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -200,6 +201,9 @@
     <ClInclude Include="hls.httpschemeproxy.h" />
     <ClInclude Include="hls.httpschemeproxy_h.h" />
     <ClInclude Include="httpschemehandler.h" />
+    <ClInclude Include="m3u8bytestreamhandler.h" />
+    <ClInclude Include="m3u8mediasource.h" />
+    <ClInclude Include="mediaplaylist.h" />
     <ClInclude Include="mediasourceproxy.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="targetver.h" />
@@ -211,6 +215,8 @@
     <ClCompile Include="dump.cpp" />
     <ClCompile Include="httpschemehandler.cpp" />
     <ClCompile Include="bytestreamproxy.cpp" />
+    <ClCompile Include="m3u8bytestreamhandler.cpp" />
+    <ClCompile Include="m3u8mediasource.cpp" />
     <ClCompile Include="mediasourceproxy.cpp" />
     <ClCompile Include="mediastreamproxy.cpp" />
     <ClCompile Include="pch.cpp">

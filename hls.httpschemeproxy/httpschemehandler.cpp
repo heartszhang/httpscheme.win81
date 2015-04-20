@@ -44,7 +44,7 @@ HRESULT HttpSchemeHandler::CancelObjectCreation(IUnknown * cancel_cookie) {
   return resolver->CancelObjectCreation(cancel_cookie);
 }
 
-HRESULT HttpSchemeHandler::SetProperties(ABI::Windows::Foundation::Collections::IPropertySet * configuration) {
+HRESULT HttpSchemeHandler::SetProperties(ABI::Windows::Foundation::Collections::IPropertySet * ) {
   dump( L"set-properties but we do nothing\n" );
   return S_OK;
 }

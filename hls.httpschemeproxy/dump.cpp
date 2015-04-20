@@ -12,27 +12,28 @@ void dump( const wchar_t*fmt, ... ) {
   if ( ok( r ) || r == STRSAFE_E_INSUFFICIENT_BUFFER )
     OutputDebugStringW( buf );
 }
+static struct mediasource_char {
+  DWORD id;
+  const wchar_t* name;
+}mediasource_chars[] {{MFMEDIASOURCE_IS_LIVE, L"MFMEDIASOURCE_IS_LIVE"}
+, { MFMEDIASOURCE_CAN_SEEK , L"MFMEDIASOURCE_CAN_SEEK"}
+, { MFMEDIASOURCE_CAN_PAUSE , L"MFMEDIASOURCE_CAN_PAUSE"}
+, { MFMEDIASOURCE_HAS_SLOW_SEEK, L"MFMEDIASOURCE_HAS_SLOW_SEEK" }
+, { MFMEDIASOURCE_HAS_MULTIPLE_PRESENTATIONS, L"MFMEDIASOURCE_HAS_MULTIPLE_PRESENTATIONS" }
+, { MFMEDIASOURCE_CAN_SKIPFORWARD, L"MFMEDIASOURCE_CAN_SKIPFORWARD" }
+, { MFMEDIASOURCE_CAN_SKIPBACKWARD, L"MFMEDIASOURCE_CAN_SKIPBACKWARD" }
+, { MFMEDIASOURCE_DOES_NOT_USE_NETWORK, L"MFMEDIASOURCE_DOES_NOT_USE_NETWORK" }};
+
 
 void dump_chars( DWORD chars ) {
-  const auto p0 = L"-";
-  auto p1 = L"MFMEDIASOURCE_IS_LIVE";
-  auto p2 = L"MFMEDIASOURCE_CAN_SEEK";
-  auto p4 = L"MFMEDIASOURCE_CAN_PAUSE";
-  auto p8 = L"MFMEDIASOURCE_HAS_SLOW_SEEK";
-  auto p10 = L"MFMEDIASOURCE_HAS_MULTIPLE_PRESENTATIONS";
-  auto p20 = L"MFMEDIASOURCE_CAN_SKIPFORWARD";
-  auto p40 = L"MFMEDIASOURCE_CAN_SKIPBACKWARD";
-  auto p80 = L"MFMEDIASOURCE_DOES_NOT_USE_NETWORK";
-  if ( ( chars & MFMEDIASOURCE_IS_LIVE ) == 0 ) p1 = p0;
-  if ( ( chars & MFMEDIASOURCE_CAN_SEEK ) == 0 ) p2 = p0;
-  if ( ( chars & MFMEDIASOURCE_CAN_PAUSE ) == 0 ) p4 = p0;
-  if ( ( chars & MFMEDIASOURCE_HAS_SLOW_SEEK ) == 0 ) p8 = p0;
-  if ( ( chars & MFMEDIASOURCE_HAS_MULTIPLE_PRESENTATIONS ) == 0 ) p10 = p0;
-  if ( ( chars &MFMEDIASOURCE_CAN_SKIPFORWARD ) == 0 ) p20 = p0;
-  if ( ( chars &MFMEDIASOURCE_CAN_SKIPBACKWARD ) == 0 ) p40 = p0;
-  if ( ( chars & MFMEDIASOURCE_DOES_NOT_USE_NETWORK ) == 0 ) p80 = p0;
-
-  dump( L"characters: %s %s %s %s %s %s %s %s\n", p1, p2, p4, p8, p10, p20, p40, p80 );
+  const auto p0 = L"";
+  const wchar_t* p[] = { p0, p0, p0, p0, p0, p0, p0, p0 };
+  for ( auto i = 0; i < _countof( mediasource_chars ); i++ ) {
+    if ( ( mediasource_chars[ i ].id & chars ) != 0 )
+      p[ i ] = mediasource_chars[ i ].name;
+  }
+  
+  dump( L"characters: %s %s %s %s %s %s %s %s\n", p[ 0 ], p[ 1 ], p[ 2 ], p[ 3 ], p[ 4 ], p[ 5 ], p[ 6 ], p[ 7 ] );
 }
 
 void mfguid_string( GUID const &guid, wchar_t *buf, size_t len ) {
@@ -99,11 +100,13 @@ void dump_prop( GUID const &key, PROPVARIANT*val ) {
 void dump_attrs( IMFAttributes *attrs ) {
   UINT32 count = 0;
   GUID key;
-  auto hr = attrs->GetCount( &count );
+  (void)attrs->GetCount( &count );
   for ( UINT32 i = 0; i < count; i++ ) {
     PropVariant prop{};
     auto hr = attrs->GetItemByIndex( i, &key, &prop );
-    if ( ok( hr ) )
+    if ( IsEqualGUID( key, MF_MT_FRAME_SIZE ) ) {
+      dump( L"MF_MT_FRAME_SIZE = %ld x %ld\n", prop.uhVal.HighPart, prop.uhVal.LowPart );
+    }else    if ( ok( hr ) )
       dump_prop( key, &prop );
   }
 }
@@ -131,7 +134,7 @@ void dump_pd( IMFPresentationDescriptor *pd ) {
   dump( L"pres-desc\n" );
   dump_attrs( pd );
   DWORD scount = 0;
-  auto hr = pd->GetStreamDescriptorCount( &scount );
+  (void)pd->GetStreamDescriptorCount( &scount );
   for ( DWORD i = 0; i < scount; i++ ) {
     ComPtr<IMFStreamDescriptor> sd;
     BOOL selected;
@@ -261,7 +264,14 @@ static struct event_name {
 
 void dump_met( const wchar_t*fmt, DWORD met ) {
   for ( auto i = 0; i < _countof( event_names ); i++ ) {
-    if ( event_names[ i ].id == met )
+    if ( DWORD(event_names[ i ].id) == met )
       dump( fmt, event_names[ i ].name );
   }
+}
+
+void dump_msample( IMFSample* sample ) {
+  LONGLONG t = 0, du =0;
+  (void)sample->GetSampleDuration( &du );
+  (void)sample->GetSampleTime( &t );
+  dump( L"sample time: %d ms, duration: %d ms\n", t/10000, du/10000);
 }

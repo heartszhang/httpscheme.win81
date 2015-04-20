@@ -15,7 +15,7 @@ template<typename I>
 ComPtr<I> AsyncResultGetObject( IMFAsyncResult*result ) {
   ComPtr<IUnknown> ui;
   ComPtr<I> v;
-  auto hr = result->GetObject( &ui );
+  (void)result->GetObject( &ui );
   ui.As( &v );
   return v;
 }
@@ -48,3 +48,14 @@ struct PropVariant : PROPVARIANT {
     u->AddRef();
   }
 };
+
+template<typename I>
+ComPtr<I> MediaEventGetValue( IMFMediaEvent*evt ) {
+  PropVariant p;
+  ComPtr<I> v;
+  auto hr = evt->GetValue( &p );
+  if ( ok( hr ) && p.vt == VT_UNKNOWN )
+    p.punkVal->QueryInterface( v.ReleaseAndGetAddressOf() );
+  return v;
+}
+void dump_msample( IMFSample* sample );

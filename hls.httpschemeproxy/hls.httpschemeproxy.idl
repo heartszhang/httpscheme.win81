@@ -9,6 +9,7 @@ namespace hls{namespace httpschemeproxy{
   interface Windows.Media.IMediaExtension;
   runtimeclass HttpSchemeHandler;
   runtimeclass ByteStreamProxyHandler;
+  runtimeclass M3u8ByteStreamHandler;
 
   [version(COMPONENT_VERSION)]
   [activatable(COMPONENT_VERSION)]
@@ -19,6 +20,12 @@ namespace hls{namespace httpschemeproxy{
   [version(COMPONENT_VERSION)]
   [activatable(COMPONENT_VERSION)]
   runtimeclass ByteStreamProxyHandler{
+    [default] interface Windows.Media.IMediaExtension;
+  };
+
+  [version(COMPONENT_VERSION)]
+  [activatable(COMPONENT_VERSION)]
+  runtimeclass M3u8ByteStreamHandler{
     [default] interface Windows.Media.IMediaExtension;
   };
 }}

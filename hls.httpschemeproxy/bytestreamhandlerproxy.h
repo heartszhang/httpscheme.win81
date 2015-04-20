@@ -3,7 +3,7 @@
 namespace ABI {
 namespace hls {
 namespace httpschemeproxy {
-  struct ByteStreamHandlerProxy : public RuntimeClass < RuntimeClassFlags<WinRtClassicComMix>
+class ByteStreamHandlerProxy : public RuntimeClass < RuntimeClassFlags<WinRtClassicComMix>
     , ABI::Windows::Media::IMediaExtension
     , IMFByteStreamHandler > {
     InspectableClass( RuntimeClass_hls_httpschemeproxy_ByteStreamProxyHandler, BaseTrust )

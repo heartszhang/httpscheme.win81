@@ -36,7 +36,9 @@ public:  // IMFMediaEventGenerator
       return hr;
     MediaEventType met;
     hr = ( *ppEvent )->GetType( &met );
-    dump_met( L"media-stream event %s\n", met );
+    if ( met == MEMediaSample )
+      dump_msample( MediaEventGetValue<IMFSample>( *ppEvent ).Get() );
+    else dump_met( L"media-stream event %s\n", met );
     return hr;
   }
   STDMETHODIMP QueueEvent( MediaEventType met

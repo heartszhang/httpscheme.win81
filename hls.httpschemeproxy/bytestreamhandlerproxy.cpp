@@ -54,7 +54,7 @@ HRESULT ByteStreamHandlerProxy::GetMaxNumberOfBytesRequiredForResolution(
   dump( L"ByteStreamHandlerProxy GetMax : 128\n" );
   return S_OK;
 }
-HRESULT ByteStreamHandlerProxy::SetProperties( ABI::Windows::Foundation::Collections::IPropertySet * configuration ) {
+HRESULT ByteStreamHandlerProxy::SetProperties( ABI::Windows::Foundation::Collections::IPropertySet *  ) {
   dump( L"set-properties but we do nothing\n" );
   return S_OK;
 }
