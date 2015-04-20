@@ -19,6 +19,7 @@
     <ClCompile Include="mediastreamproxy.cpp" />
     <ClCompile Include="m3u8bytestreamhandler.cpp" />
     <ClCompile Include="m3u8mediasource.cpp" />
+    <ClCompile Include="m3u8.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -31,6 +32,7 @@
     <ClInclude Include="m3u8bytestreamhandler.h" />
     <ClInclude Include="m3u8mediasource.h" />
     <ClInclude Include="mediaplaylist.h" />
+    <ClInclude Include="m3u8.h" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="hls.httpschemeproxy.idl" />
