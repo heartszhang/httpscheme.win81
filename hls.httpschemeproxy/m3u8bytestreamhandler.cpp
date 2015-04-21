@@ -26,7 +26,7 @@ HRESULT M3u8ByteStreamHandler::BeginCreateObject(
   auto inner = CreateAsyncCallback( [src, cb, state]( IMFAsyncResult* result ) ->HRESULT {
     ComPtr<IMFAsyncResult> outer;
     auto hr = src->EndOpen( result );
-    auto x = MFCreateAsyncResult( src.Get(), cb, state, &outer );
+    auto x = MFCreateAsyncResult( static_cast<IMFMediaSource*>(src.Get()), cb, state, &outer );
     outer->SetStatus( hr );
     if ( ok( x ) )
       x = MFPutWorkItemEx2( MFASYNC_CALLBACK_QUEUE_MULTITHREADED, 0, outer.Get() );
@@ -49,7 +49,7 @@ HRESULT M3u8ByteStreamHandler::EndCreateObject(  IMFAsyncResult *result,MF_OBJEC
   if ( failed( hr ) )
     return hr;
   *ot = MF_OBJECT_MEDIASOURCE;
-  *obj = src.Detach();
+  *obj = static_cast<IMFMediaSource*>(src.Detach());
   return hr;
 }
 

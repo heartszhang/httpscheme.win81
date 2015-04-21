@@ -21,6 +21,7 @@
 #include <mfidl.h>
 #include <uuids.h>
 #include <mfreadwrite.h>
+#include <mferror.h>
 
 #pragma comment(lib, "mf.lib")
 #pragma comment(lib, "mfplat")

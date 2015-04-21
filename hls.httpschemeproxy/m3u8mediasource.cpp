@@ -5,36 +5,50 @@
 M3u8MediaSource::M3u8MediaSource( MediaPlaylist const&list):playlist(list) {}
 
 
+//set-source at any status
 HRESULT M3u8MediaSource::BeginOpen( LPCWSTR url
                                     , DWORD flags
                                     , IPropertyStore *props
                                     , IUnknown**cancel
                                     , IMFAsyncCallback*cb, IUnknown*state ) {
+  Locker _( this ); 
+  //should we check input parameters
+  //todo: what if do beginopen when playing?
+  if ( status != MediaSourceStatus::closed || status != MediaSourceStatus::shutdown )
+    return MF_E_STATE_TRANSITION_PENDING;
   uri = url;
+  status = MediaSourceStatus::opening;
   auto hr = resolver->BeginCreateObjectFromURL( playlist.segments[ 0 ].c_str(), flags, props, cancel, cb, state );
   return hr;
 }
 
 HRESULT M3u8MediaSource::EndOpen( IMFAsyncResult*result ) {
+  Locker _( this );
   auto ot = MF_OBJECT_INVALID;
   ComPtr<IUnknown> first;
   auto hr = resolver->EndCreateObjectFromURL( result, &ot, &first );
   if ( ot == MF_OBJECT_MEDIASOURCE )
     sources.push_back( Cast<IMFMediaSource>(first) );
-  
+  current = Cast<IMFMediaSource>( first );
   return hr;
 }
 
 HRESULT M3u8MediaSource::GetCharacteristics(DWORD *chars ) {
-  auto hr = source->GetCharacteristics( chars );
-  if ( ok( hr ) )
-    dump_chars( *chars );
-  return hr;
+  Locker _( this );
+  //MF_E_SHUTDOWN
+  //MFMEDIASOURCE_HAS_MULTIPLE_PRESENTATIONS
+  *chars = MFMEDIASOURCE_CAN_SEEK | MFMEDIASOURCE_CAN_PAUSE | MFMEDIASOURCE_HAS_SLOW_SEEK | MFMEDIASOURCE_CAN_SKIPFORWARD | MFMEDIASOURCE_CAN_SKIPBACKWARD | MFMEDIASOURCE_HAS_MULTIPLE_PRESENTATIONS;
+  return S_OK;
+  
 }
 
 HRESULT M3u8MediaSource::CreatePresentationDescriptor(IMFPresentationDescriptor **pd ) {
-  auto hr = source->CreatePresentationDescriptor( pd );
-  dump( L"source create-pd \n" );
+  Locker _( this );
+  if ( current == nullptr )
+    return MF_E_NOT_INITIALIZED;
+  //MF_E_SHUTDOWN
+  auto hr = current->CreatePresentationDescriptor( pd );
+  dump( L"media-source CreatePresentationDescriptor \n" );
   if ( ok( hr ) )
     dump_pd( *pd );
   return hr;
@@ -44,7 +58,11 @@ HRESULT M3u8MediaSource::CreatePresentationDescriptor(IMFPresentationDescriptor 
 HRESULT M3u8MediaSource::Start( IMFPresentationDescriptor *pPresentationDescriptor
                                 , const GUID *pguidTimeFormat
                                 , const PROPVARIANT *pvarStartPosition ) {
-  auto hr = source->Start( pPresentationDescriptor, pguidTimeFormat, pvarStartPosition );
+  Locker _( this );
+  if ( current == nullptr )
+    return MF_E_NOT_INITIALIZED;
+  //MF_E_SHUTDOWN
+  auto hr = current->Start( pPresentationDescriptor, pguidTimeFormat, pvarStartPosition );
   dump( L"source start\n" );
   if ( ok( hr ) )
     dump_pd( pPresentationDescriptor );
@@ -53,40 +71,51 @@ HRESULT M3u8MediaSource::Start( IMFPresentationDescriptor *pPresentationDescript
 
 
 HRESULT M3u8MediaSource::Stop( void ) {
-  auto hr = source->Stop();
+  Locker _( this );
+  if ( current == nullptr )
+    return MF_E_NOT_INITIALIZED;
+  auto hr = current->Stop();
   dump( L"source stop\n" );
   return hr;
 }
 
 
 HRESULT M3u8MediaSource::Pause( void ) {
-  auto hr = source->Pause();
+  Locker _( this );
+  if ( current == nullptr )
+    return MF_E_NOT_INITIALIZED;
+  auto hr = current->Pause();
   dump( L"source pause\n" );
   return hr;
 }
 
 
 HRESULT M3u8MediaSource::Shutdown( void ) {
-  auto hr = source->Shutdown();
+  Locker _( this );
+  if ( current == nullptr )
+    return MF_E_NOT_INITIALIZED;
+  auto hr = current->Shutdown();
   dump( L"source shutdown\n" );
   return hr;
 }
 
 HRESULT M3u8MediaSource::GetEvent( DWORD dwFlags, IMFMediaEvent **ppEvent ) {
-  auto hr = source->GetEvent( dwFlags, ppEvent );
-  dump( L"source get-event flags=%X\n", dwFlags );
+  //todo: should we fetch current and release the lock and then GetEvent
+  auto hr = current->GetEvent( dwFlags, ppEvent );
   return hr;
 }
 
 
 HRESULT M3u8MediaSource::BeginGetEvent(IMFAsyncCallback *pCallback,IUnknown *punkState ) {
-  auto hr = source->BeginGetEvent( pCallback, punkState );
+  Locker _( this );
+  auto hr = current->BeginGetEvent( pCallback, punkState );
   //  dump( L"source begin-get-event\n" );
   return hr;
 }
 
 HRESULT M3u8MediaSource::EndGetEvent(IMFAsyncResult *pResult,IMFMediaEvent **ppEvent ) {
-  auto hr = source->EndGetEvent( pResult, ppEvent );
+  Locker _( this );
+  auto hr = current->EndGetEvent( pResult, ppEvent );
   MediaEventType met = MEUnknown;
   if ( ok( hr ) )
     ( *ppEvent )->GetType( &met );
@@ -112,9 +141,24 @@ HRESULT M3u8MediaSource::EndGetEvent(IMFAsyncResult *pResult,IMFMediaEvent **ppE
 }
 
 
-HRESULT M3u8MediaSource::QueueEvent(MediaEventType met,REFGUID guidExtendedType, HRESULT hrStatus, const PROPVARIANT *pvValue ) {x
-  auto hr = source->QueueEvent( met, guidExtendedType, hrStatus, pvValue );
+HRESULT M3u8MediaSource::QueueEvent(MediaEventType met,REFGUID guidExtendedType, HRESULT hrStatus, const PROPVARIANT *pvValue ) {
+  Locker _( this );
+  auto hr = current->QueueEvent( met, guidExtendedType, hrStatus, pvValue );
   dump( L"source queue-event %d, hr = %X\n", met, hrStatus );
   return hr;
 }
 
+HRESULT M3u8MediaSource::Lock() {
+  lock.lock();
+  return S_OK;
+}
+HRESULT M3u8MediaSource::Unlock() {
+  lock.unlock();
+  return S_OK;
+}
+
+
+//MENewStream
+//MEUpdatedStream
+//MESourceStarted 
+//MESourceSeeked 
