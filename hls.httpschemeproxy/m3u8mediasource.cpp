@@ -127,12 +127,12 @@ HRESULT M3u8MediaSource::EndGetEvent(IMFAsyncResult *pResult,IMFMediaEvent **ppE
     return hr;
 
   ComPtr<IMFMediaEvent> oute;
-  GUID xt = GUID_NULL;
+  auto xt = GUID_NULL;
   auto status = S_OK;
   hr = ( *ppEvent )->GetExtendedType( &xt );
   if ( ok( hr ) ) hr = ( *ppEvent )->GetStatus( &status );
   PropVariant p( MakeMediaStreamProxy( stream.Get() ).Get() );
-  if ( ok( hr ) ) hr = MFCreateMediaEvent( met, xt, status, &p, &oute );
+  if ( ok( hr ) ) hr = MFCreateMediaEvent( met, xt, status, &p, oute.ReleaseAndGetAddressOf() );
   if ( ok( hr ) ) {
     ( *ppEvent )->Release();
     ( *ppEvent ) = oute.Detach();
