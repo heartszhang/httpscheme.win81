@@ -1,0 +1,22 @@
+#include <sdkddkver.h>
+import "inspectable.idl";
+import "Windows.Foundation.idl";
+#define COMPONENT_VERSION 1.0
+
+//This file name Demo.idl must match Project name and root namespace exactly, Demo.idl = Demo.vcxproj = Demo. case sensitive
+namespace hls{namespace httpschemeproxy{
+  [uuid( 497783FC-D66D-4DF6-AAFC-C4D879AB22F1 )]
+  [version( COMPONENT_VERSION )]
+  interface IEmpty : IInspectable {
+  }
+
+  [ version( COMPONENT_VERSION ) ]
+  runtimeclass HttpResponse{
+    [default] interface IEmpty;
+  }
+  declare{
+    interface Windows.Foundation.Collections.IObservableVector<HttpResponse*>;
+
+  } 
+} }
+
