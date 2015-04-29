@@ -4,6 +4,7 @@
 #include "pch.h"
 #include <ppl.h>
 #include <vector>
+#include <windows.foundation.collections.h>
 
 void dump( const wchar_t*fmt, ... ) {
   wchar_t buf[ 4096 ];
@@ -49,8 +50,7 @@ struct HttpResponse : RuntimeClass<IInspectable> {
 
 };
 
-using HttpAsyncOperationCompleteHandler = IAsyncOperationCompletedHandler<IUnknown*>;
-struct HttpResponseAsyncOperation : RuntimeClass<AsyncBase<HttpAsyncOperationCompleteHandler>> {
+struct HttpResponseAsyncOperation : RuntimeClass<AsyncBase<IAsyncOperationCompletedHandler<HSTRING>>> {
   
 };
 namespace bestv { namespace web {
