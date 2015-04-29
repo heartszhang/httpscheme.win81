@@ -17,5 +17,8 @@ using namespace ABI::Windows::Foundation;
 using namespace Microsoft::WRL;
 using namespace Microsoft::WRL::Wrappers;
 
+using ulong_t = unsigned long;
+using long_t = long;
+
 inline bool ok( HRESULT hr ) { return SUCCEEDED( hr ); }
 inline bool failed( HRESULT hr ) { return FAILED( hr ); }

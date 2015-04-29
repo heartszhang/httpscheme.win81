@@ -4,11 +4,60 @@
 #include "pch.h"
 #include <ppl.h>
 #include <vector>
-#if 0
-namespace web { namespace http {
-struct HttpResponse : public RuntimeClass<IInspectable> {
+
+void dump( const wchar_t*fmt, ... ) {
+  wchar_t buf[ 4096 ];
+  va_list va;
+  va_start( va, fmt );
+  auto r = StringCchVPrintfW( buf, _countof( buf ), fmt, va );  // ignore return value
+  va_end( va );
+  if ( ok( r ) || r == STRSAFE_E_INSUFFICIENT_BUFFER )
+    OutputDebugStringW( buf );
+}
+
+struct header_string {
+  wchar_t *data = nullptr;
+  ~header_string() {
+    CoTaskMemFree( data );
+  }
+  std::wstring str() {
+    return std::wstring( data );
+  }
+};
+//Content-Type: text/html; charset=utf-8
+std::wstring content_string( const std::wstring, const std::vector<char>&data ) {
+  std::vector<wchar_t> buf( data.size() );
+  auto r = MultiByteToWideChar( CP_UTF8, 0
+                                , data.data(), static_cast<int>( data.size() ), buf.data(), static_cast<int>( buf.size() ) );
+  return std::wstring( buf.data(), r );
+}
+std::vector<char> read_full( ISequentialStream *stream ) {
+  std::vector<char> data;
+  uint8_t buf[ 4096 ];
+  ULONG readed = 0;
+  auto hr = S_OK;
+  do {
+    hr = stream->Read( buf, sizeof( buf ), &readed );
+
+    auto n = data.size();
+    data.resize( n + readed );
+    memcpy_s( data.data() + n, readed, buf, readed );
+  } while ( ok( hr ) && readed > 0 );
+  return std::move( data );
+}
+struct HttpResponse : RuntimeClass<IInspectable> {
 
 };
+
+using HttpAsyncOperationCompleteHandler = IAsyncOperationCompletedHandler<IUnknown*>;
+struct HttpResponseAsyncOperation : RuntimeClass<AsyncBase<HttpAsyncOperationCompleteHandler>> {
+  
+};
+namespace bestv { namespace web {
+} }
+#if 0
+namespace web { namespace http {
+
 struct HttpRequest : public RuntimeClass<IInspectable> {
 
 };
@@ -19,32 +68,10 @@ struct __declspec( uuid( "08FF6CE4-ECF4-4333-9DD2-F9613CD82551" ) ) __declspec( 
 
 class HttpRequestCallback;
 struct HttpClient : public RuntimeClass<IInspectable> {
-  virtual HRESULT __stdcall SendRequestAsync( HttpRequest*, IAsyncOperation<HttpResponse*> ** );
+  virtual HRESULT __stdcall GetAsync( const wchar_t* url, IAsyncOperation<HttpResponse*> ** );
 };
 } }
-class HttpRequestCallback :
-  public RuntimeClass<RuntimeClassFlags<ClassicCom>, IXMLHTTPRequest2Callback, FtmBase> {
-public:
-  HttpRequestCallback( );
 
-  // Called when the HTTP request is being redirected to a new URL.
-  STDMETHODIMP OnRedirect( _In_opt_ IXMLHTTPRequest2*, __RPC__in_string const WCHAR* ) {    return S_OK;  }
-
-  // Called when HTTP headers have been received and processed.
-  STDMETHODIMP OnHeadersAvailable( _In_ IXMLHTTPRequest2* xmlReq, DWORD dw, __RPC__in_string const WCHAR* phrase );
-
-  // Called when a portion of the entity body has been received.
-  STDMETHODIMP OnDataAvailable( _In_opt_ IXMLHTTPRequest2*, _In_opt_ ISequentialStream* ) {    return S_OK;  }
-
-  // Called when the entire entity response has been received.
-  STDMETHODIMP OnResponseReceived( _In_opt_ IXMLHTTPRequest2*, _In_opt_ ISequentialStream* );
-
-  // Called when an error occurs during the HTTP request.
-  STDMETHODIMP OnError( _In_opt_ IXMLHTTPRequest2*, HRESULT hrError );
-
-private:
-
-};
 #endif
 #if TV_API
 #define CLSCTX_GENERAL CLSCTX_SERVER
@@ -52,17 +79,45 @@ private:
 #define CLSCTX_GENERAL CLSCTX_INPROC
 #endif
 
+using CompleteHandler = std::function<void(int status, std::wstring const& reason, std::wstring const&headers, std::wstring const&content)>;  //no except
+using ErrorHandler = std::function<void(long hr)>;
+
+struct HttpRequestCallback :  RuntimeClass<RuntimeClassFlags<ClassicCom>, IXMLHTTPRequest2Callback, FtmBase> {  
+  HttpRequestCallback( CompleteHandler ch, ErrorHandler eh):_complete(ch), _error(eh){}
+
+public:  //IXMLHTTPRequest2Callback
+  STDMETHODIMP OnRedirect(  IXMLHTTPRequest2*,  const WCHAR* ) { return S_OK; }
+  STDMETHODIMP OnHeadersAvailable( IXMLHTTPRequest2* xhr, DWORD status, const WCHAR*  phrase) {
+    _status = status;
+    _phrase = phrase;
+    header_string hs;
+    xhr->GetAllResponseHeaders( &hs.data );
+    _headers = std::move(hs.str());
+    return S_OK;
+  }
+  STDMETHODIMP OnDataAvailable(  IXMLHTTPRequest2*,  ISequentialStream* ) { return S_OK; }
+  STDMETHODIMP OnResponseReceived(IXMLHTTPRequest2*, ISequentialStream*stream) {
+    auto content = ::content_string( std::wstring(), read_full( stream ) );
+    _complete( _status, _phrase, _headers, content );
+    // be aware of cyclic reference
+    _complete = []( int, std::wstring const&, std::wstring const&, std::wstring const& ) {};
+    return S_OK;
+  }
+  STDMETHODIMP OnError(IXMLHTTPRequest2*, HRESULT err) {
+    if (_error) _error( err );
+    _error = []( long ) {};
+    return S_OK;
+  }
+private:
+  CompleteHandler _complete;
+  ErrorHandler _error;
+  ulong_t   _status;
+  std::wstring _phrase;
+  std::wstring _headers;
+};
+
 struct XhrCallback :  public RuntimeClass<RuntimeClassFlags<ClassicCom>, IXMLHTTPRequest2Callback> {
-protected:
-  // Return value from final callbacks, including OnResponseReceived or
-  // OnError event handler. Once a final callback is called, no more callback
-  // will be executed.
-  HRESULT result  = 0;
-  DWORD status = 0;// HTTP status code from OnHeadersAvailable event handler.
-
   STDMETHODIMP RuntimeClassInitialize();
-
-  friend HRESULT MakeAndInitialize<XhrCallback>( XhrCallback ** );
 
 public: //IXMLHTTPRequest2Callback
 
@@ -77,9 +132,17 @@ int main_imp() {
   ComPtr<IXMLHTTPRequest2> xhr;
   auto hr = CoCreateInstance( __uuidof( FreeThreadedXMLHTTP60 ), nullptr, CLSCTX_GENERAL
                          , __uuidof( IXMLHTTPRequest2 ), reinterpret_cast< void** >( xhr.GetAddressOf() ) );
-  auto cb = Make<XhrCallback>();
+  auto cb = Make<HttpRequestCallback>([](int s, std::wstring const&phrase, std::wstring const&headers, std::wstring const&body)
+  {
+    dump( L"%d, %s\n", s, phrase.c_str() );
+    dump( L"%s\n", headers.c_str() );
+    dump( L"%s\n", body.c_str() );
+  }, []( int r )
+  {
+    dump( L"failed for 0x%X\n", r );
+  });
   if ( ok( hr ) )
-    hr = xhr->Open( L"GET", L"http://www.baidu.com.cn/", cb.Get(), nullptr, nullptr, nullptr, nullptr );
+    hr = xhr->Open( L"GET", L"http://testbox01.chinacloudapp.cn:8080/epg/XboxService/QueryPosition?Code=XBOX_POSITION_1", cb.Get(), nullptr, nullptr, nullptr, nullptr );
   if ( ok( hr ) )
     hr = xhr->SetProperty( XHR_PROP_NO_CRED_PROMPT, 1 );
   if ( ok( hr ) )
@@ -103,16 +166,6 @@ int wmain(int , wchar_t* [])
   return r;
 }
 
-
-void dump( const wchar_t*fmt, ... ) {
-  wchar_t buf[ 4096 ];
-  va_list va;
-  va_start( va, fmt );
-  auto r = StringCchVPrintfW( buf, _countof( buf ), fmt, va );  // ignore return value
-  va_end( va );
-  if ( ok( r ) || r == STRSAFE_E_INSUFFICIENT_BUFFER )
-    OutputDebugStringW( buf );
-}
 HRESULT __stdcall XhrCallback::RuntimeClassInitialize(){
   return S_OK;
 }
@@ -128,41 +181,11 @@ STDMETHODIMP XhrCallback::OnHeadersAvailable( IXMLHTTPRequest2 *, DWORD status, 
 }
 
 STDMETHODIMP XhrCallback::OnDataAvailable( IXMLHTTPRequest2 *, ISequentialStream * ) {  return S_OK;}
-
-struct header_string {
-  wchar_t *data = nullptr;
-  ~header_string() {
-    CoTaskMemFree( data );
-  }
-  std::wstring str() {
-    return std::wstring( data );
-  }
-};
-//Content-Type: text/html; charset=utf-8
-std::wstring content(const std::wstring , const std::vector<char>&data) {
-  std::vector<wchar_t> buf( data.size()  );
-  auto r = MultiByteToWideChar( CP_UTF8, 0
-                                , data.data(), static_cast<int>( data.size() ), buf.data(), static_cast<int>( buf.size() ) );
-  return std::wstring( buf.data(), r );
-}
 STDMETHODIMP XhrCallback::OnResponseReceived( IXMLHTTPRequest2 *xhr, ISequentialStream * stream) {
-  //header_string headers;
-  //auto hr = xhr->GetResponseHeader( L"Content-Length", &cls );
-  //auto hr = xhr->GetAllResponseHeaders( &headers.data );
-  //dump( headers.str().c_str() );
   header_string contyp;
-  auto hr = xhr->GetResponseHeader( L"Content-Type", &contyp.data );
-  std::vector<char> data;
-  uint8_t buf[ 4096 ];
-  ULONG readed = 0;
-  do {
-    hr = stream->Read( buf, sizeof( buf ), &readed );
+  (void)xhr->GetResponseHeader( L"Content-Type", &contyp.data );
 
-    auto n = data.size();
-    data.resize( n + readed );
-    memcpy_s( data.data()+n, readed, buf, readed );    
-  } while ( ok( hr ) && readed > 0 );
-  auto c = content( contyp.str(), data );
+  auto c = content_string( contyp.str(), read_full( stream ) );
   dump( c.c_str() );
   return S_OK;
 }
