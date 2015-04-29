@@ -3,8 +3,9 @@
 #include "targetver.h"
 #include <Windows.Foundation.h>
 #include <wrl.h>
-#include <wrl\wrappers\corewrappers.h>
+#include <wrl/wrappers/corewrappers.h>
 #include <wrl/async.h>
+#include <strsafe.h>
 #if !TV_API
 #include <msxml6.h>
 #else
