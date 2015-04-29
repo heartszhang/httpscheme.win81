@@ -5,6 +5,7 @@
 #include <ppl.h>
 #include <vector>
 #include <windows.foundation.collections.h>
+#include "httpclient.demo_h.h"
 
 void dump( const wchar_t*fmt, ... ) {
   wchar_t buf[ 4096 ];
@@ -46,12 +47,24 @@ std::vector<char> read_full( ISequentialStream *stream ) {
   } while ( ok( hr ) && readed > 0 );
   return std::move( data );
 }
-struct HttpResponse : RuntimeClass<IInspectable> {
+using namespace ABI::bestv::web;
 
-};
-
-struct HttpResponseAsyncOperation : RuntimeClass<AsyncBase<IAsyncOperationCompletedHandler<HSTRING>>> {
-  
+struct HttpResponseAsyncOperation : RuntimeClass<AsyncBase<IAsyncOperationCompletedHandler<IHttpResponse*>>, IAsyncOperation<IHttpResponse*>> {
+  using HandlerType = IAsyncOperationCompletedHandler < IHttpResponse* > ;
+public: //IAsyncOperation<IHttpResponse*>
+  STDMETHODIMP put_Completed( HandlerType *handler ) { return PutOnComplete( handler ); }
+  STDMETHODIMP get_Completed( HandlerType **handler ) { return GetOnComplete( handler ); }
+  STDMETHODIMP GetResults( IHttpResponse **result ) {
+    auto hr = CheckValidStateForResultsCall();
+    if ( ok(hr) )
+      *result = this->result.Detach();
+    return hr;
+  }
+public:
+  void WhenResponseReceived();
+  void WhenError();
+private:
+  ComPtr<IHttpResponse> result;
 };
 namespace bestv { namespace web {
 } }
