@@ -6,6 +6,8 @@ import "Windows.Data.Json.idl";
 
 //This file name Demo.idl must match Project name and root namespace exactly, Demo.idl = Demo.vcxproj = Demo. case sensitive
 namespace bestv{namespace web{
+  interface Windows.Data.Json.IJsonValue;
+
   [
     uuid( 497783FC-D66D-4DF6-AAFC-C4D879AB22F1 ),
     version( COMPONENT_VERSION )

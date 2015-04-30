@@ -6,6 +6,7 @@
 #include <wrl.h>
 #include <wrl/wrappers/corewrappers.h>
 #include <wrl/async.h>
+#include <roapi.h>
 #include <strsafe.h>
 #if !TV_API
 #include <msxml6.h>

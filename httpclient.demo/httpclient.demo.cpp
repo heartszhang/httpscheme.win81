@@ -34,7 +34,16 @@ std::wstring content_string( const std::wstring, const std::vector<char>&data ) 
   return std::wstring( buf.data(), r );
 }
 ComPtr<IJsonValue> content_json(const std::vector<char>&data) {
+  ComPtr<IJsonValueStatics> parser;
+  ComPtr<IJsonValue> jv;
+  auto hr = RoGetActivationFactory( HStringReference( RuntimeClass_Windows_Data_Json_JsonValue ).Get(), __uuidof( IJsonValueStatics )
+                          , reinterpret_cast<void**>(parser.GetAddressOf() ));
+  auto body = content_string( std::wstring(), data );
+  boolean suc = false;
+  if ( ok( hr ) )
+    hr = parser->TryParse( HStringReference( body.c_str() ).Get(), jv.GetAddressOf() , &suc);
   
+  return jv;
 }
 std::vector<char> read_full( ISequentialStream *stream ) {
   std::vector<char> data;
@@ -64,8 +73,8 @@ public: //IAsyncOperation<IHttpResponse*>
     return hr;
   }
 public:
-  void WhenResponseReceived();
-  void WhenError();
+//  void WhenResponseReceived();
+//  void WhenError();
 private:
   ComPtr<IHttpResponse> result;
 };
@@ -113,10 +122,13 @@ public:  //IXMLHTTPRequest2Callback
   }
   STDMETHODIMP OnDataAvailable(  IXMLHTTPRequest2*,  ISequentialStream* ) { return S_OK; }
   STDMETHODIMP OnResponseReceived(IXMLHTTPRequest2*, ISequentialStream*stream) {
-    auto content = ::content_string( std::wstring(), read_full( stream ) );
+    auto jv = content_json( read_full( stream ) );
+    jv;
+/*    auto content = ::content_string( std::wstring(), read_full( stream ) );
     _complete( _status, _phrase, _headers, content );
     // be aware of cyclic reference
     _complete = []( int, std::wstring const&, std::wstring const&, std::wstring const& ) {};
+    */
     return S_OK;
   }
   STDMETHODIMP OnError(IXMLHTTPRequest2*, HRESULT err) {
@@ -175,10 +187,10 @@ int main_imp() {
 }
 int wmain(int , wchar_t* [])
 {
-  (void)CoInitializeEx( nullptr, COINIT_MULTITHREADED );
-//  RoInitializeWrapper initialize( RO_INIT_MULTITHREADED );
+  //(void)CoInitializeEx( nullptr, COINIT_MULTITHREADED );
+  RoInitializeWrapper initialize( RO_INIT_MULTITHREADED );
   auto r = main_imp();
-  CoUninitialize();
+  //CoUninitialize();
   return r;
 }
 
@@ -201,8 +213,9 @@ STDMETHODIMP XhrCallback::OnResponseReceived( IXMLHTTPRequest2 *xhr, ISequential
   header_string contyp;
   (void)xhr->GetResponseHeader( L"Content-Type", &contyp.data );
 
-  auto c = content_string( contyp.str(), read_full( stream ) );
-  dump( c.c_str() );
+  //auto c = content_string( contyp.str(), read_full( stream ) );
+  auto jv = content_json( read_full( stream ) );
+  //dump( c.c_str() );
   return S_OK;
 }
 
