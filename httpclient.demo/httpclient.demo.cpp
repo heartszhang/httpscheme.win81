@@ -33,6 +33,9 @@ std::wstring content_string( const std::wstring, const std::vector<char>&data ) 
                                 , data.data(), static_cast<int>( data.size() ), buf.data(), static_cast<int>( buf.size() ) );
   return std::wstring( buf.data(), r );
 }
+ComPtr<IJsonValue> content_json(const std::vector<char>&data) {
+  
+}
 std::vector<char> read_full( ISequentialStream *stream ) {
   std::vector<char> data;
   uint8_t buf[ 4096 ];

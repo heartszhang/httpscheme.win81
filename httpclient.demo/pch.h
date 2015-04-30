@@ -1,7 +1,8 @@
 #pragma once
 
 #include "targetver.h"
-#include <Windows.Foundation.h>
+#include <windows.foundation.h>
+#include <windows.data.json.h>
 #include <wrl.h>
 #include <wrl/wrappers/corewrappers.h>
 #include <wrl/async.h>
@@ -16,6 +17,7 @@
 using namespace ABI::Windows::Foundation;
 using namespace Microsoft::WRL;
 using namespace Microsoft::WRL::Wrappers;
+using namespace ABI::Windows::Data::Json;
 
 using ulong_t = unsigned long;
 using long_t = long;
