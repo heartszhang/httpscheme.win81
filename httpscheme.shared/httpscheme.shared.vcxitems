@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{304ab35a-03c0-4977-86c2-18a6d63c282f}</ItemsProjectGuid>
+    <ItemsRootNamespace>httpscheme.shared</ItemsRootNamespace>
+    <ItemsProjectName>httpscheme.shared</ItemsProjectName>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)common.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)httprequestcallback.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)httpresponse.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)httpresponseasync.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)targetver.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)dump.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)httpresponseasync.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)stringtools.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <Midl Include="$(MSBuildThisFileDirectory)httpclient.demo.idl">
+      <AdditionalMetadataDirectories>$(WindowsSDK_MetadataPath)</AdditionalMetadataDirectories>
+      <EnableWindowsRuntime>true</EnableWindowsRuntime>
+      <PrependWithABINamepsace>true</PrependWithABINamepsace>
+      <OutputDirectory>$(MSBuildThisFileDirectory)</OutputDirectory>
+    </Midl>
+  </ItemGroup>
+</Project>

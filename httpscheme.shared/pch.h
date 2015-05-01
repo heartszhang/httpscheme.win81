@@ -13,6 +13,7 @@
 #else
 #include <ixmlhttprequest2.h>
 #endif
+#include <cstdint>
 
 
 using namespace ABI::Windows::Foundation;

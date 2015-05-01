@@ -16,15 +16,9 @@ namespace bestv{namespace web{
     HRESULT GetHeader( [ in ] HSTRING name, [ out, retval ] HSTRING* value);
     HRESULT BodyJson( [ out ] Windows.Data.Json.IJsonValue** body);
     HRESULT Status( [ out ] int*status, [ out ] HSTRING*phrase );
-    HRESULT Result( );
+//    HRESULT Result( );
   }
 
-  [ 
-    version( COMPONENT_VERSION ) ,
-  ]
-  runtimeclass HttpResponse{
-    [default] interface IHttpResponse;
-  }
   declare{
     interface Windows.Foundation.IAsyncOperation<IHttpResponse*>;
 
