@@ -4,7 +4,7 @@
 #include <algorithm>
 
 //Content-Type: text/html; charset=utf-8
-std::wstring http_content_string( const std::wstring, const std::vector<char>&data ) {
+std::wstring http_content_utf8( const std::wstring, const std::vector<char>&data ) {
   std::vector<wchar_t> buf( data.size() );
   auto r = MultiByteToWideChar( CP_UTF8, 0
                                 , data.data(), static_cast<int>( data.size() ), buf.data(), static_cast<int>( buf.size() ) );
@@ -16,7 +16,7 @@ HRESULT content_json( const std::vector<char>&data, IJsonValue**v ) {
   ComPtr<IJsonValueStatics> parser;
   auto hr = RoGetActivationFactory( HStringReference( RuntimeClass_Windows_Data_Json_JsonValue ).Get(), __uuidof( IJsonValueStatics )
                                     , reinterpret_cast<void**>( parser.GetAddressOf() ) );
-  auto body = http_content_string( std::wstring(), data );
+  auto body = http_content_utf8( L"application/json", data );
   if ( ok( hr ) )
     hr = parser->Parse( HStringReference( body.c_str() ).Get(), v );
   return hr;

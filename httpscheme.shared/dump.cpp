@@ -1,7 +1,7 @@
 #include "pch.h"
 
 void dump( const wchar_t*fmt, ... ) {
-  wchar_t buf[ 4096 ];
+  wchar_t buf[ 1024 ];
   va_list va;
   va_start( va, fmt );
   auto r = StringCchVPrintfW( buf, _countof( buf ), fmt, va );  // ignore return value

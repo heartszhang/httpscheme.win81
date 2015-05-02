@@ -8,18 +8,22 @@ struct HttpResponseAsyncOperation : RuntimeClass<AsyncBase<HttpResponseHandlerTy
   HttpResponseAsyncOperation() {
     Start();
   }
+  virtual ~HttpResponseAsyncOperation() {
+    dump( L"HttpResponseAsyncOperation::dtor\n" );
+  }
 public: //IAsyncOperation<IHttpResponse*>
   STDMETHODIMP put_Completed( HttpResponseHandlerType *handler ) { return PutOnComplete( handler ); }
   STDMETHODIMP get_Completed( HttpResponseHandlerType **handler ) { return GetOnComplete( handler ); }
   STDMETHODIMP GetResults( IHttpResponse **result ) {
     auto hr = CheckValidStateForResultsCall();
     if ( ok( hr ) )
-      *result = this->result.Detach();
+      hr = this->result.CopyTo( result );
+      
     return hr;
   }
 public:
-  void WhenResponseReceived( int status, const wchar_t*phrase, const wchar_t*headers, std::vector<char> const&body ) {
-    result= Make<HttpResponse>( status, phrase, headers, body );
+  void WhenResponseReceived( IHttpResponse*resp ) {
+    result = resp;
     if (TryTransitionToCompleted())
       ( void )FireCompletion();
   }
@@ -32,11 +36,16 @@ protected:
 
 protected://AsyncBase
   virtual HRESULT OnStart( void ) { return S_OK; }
-  virtual void OnClose( void ) {};
-  virtual void OnCancel( void ) {};
+  virtual void OnClose( void ) {
+    dump( L"IAsyncOperation<IHttpResponse*>::OnClose\n" );
+  };
+  virtual void OnCancel( void ) {
+    dump( L"IAsyncOperation<IHttpResponse*>::OnCancel\n" );    
+  };
 };
 
-auto HttpGetJson( const wchar_t*url, IAsyncOperation<IHttpResponse*> **)->HRESULT;
+auto HttpGetJsonAsync( const wchar_t*url, IAsyncOperation<IHttpResponse*> ** )->HRESULT;
+auto http_get_json_async( wchar_t const*url, std::function<HRESULT(IHttpResponse*resp, HRESULT hr)>)->HRESULT;
 #if 0
 namespace web {
   namespace http {
