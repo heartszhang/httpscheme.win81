@@ -11,7 +11,7 @@ namespace bestv { namespace web {
 
 int main_imp() {
   ComPtr<IAsyncOperation<IHttpResponse*>> async;
-  auto hr = HttpGetJsonAsync( L"http://www.cnbeta.com/articles/390467.htm", async.ReleaseAndGetAddressOf() );
+  auto hr = HttpGetAsync( L"http://www.cnbeta.com/articles/390467.htm", async.ReleaseAndGetAddressOf() );
   if ( failed( hr ) )
     return hr;
   hr = async->put_Completed( Callback<IAsyncOperationCompletedHandler<IHttpResponse*>>( []( IAsyncOperation<IHttpResponse*> *handler, AsyncStatus  ) {

@@ -1,8 +1,8 @@
 #pragma once
 #include "common.h"
 #include "httpclient.demo_h.h"
-using namespace ABI::bestv::web;
-
+//using namespace ABI::bestv::web;
+using IHttpResponse = ABI::bestv::web::IHttpResponse;
 struct HttpResponse : RuntimeClass < IHttpResponse > {
 public:
   explicit HttpResponse( HRESULT hr ) :result( hr ) {}

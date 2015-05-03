@@ -17,8 +17,20 @@ namespace bestv{namespace web{
     HRESULT BodyJson( [ out ] Windows.Data.Json.IJsonValue** body);
     HRESULT BodyText( [ out ]HSTRING*body );
     HRESULT Status( [ out ] int*status, [ out ] HSTRING*phrase );
-//    HRESULT Result( );
-  }
+  };
+
+  //[Guid("8762F4B5-7583-49A1-97F4-68A518268D12")]
+  [uuid( 8762F4B5-7583-49A1-97F4-68A518268D12 ), version(COMPONENT_VERSION)]
+  interface IHttpClient : IInspectable {
+    HRESULT GetAsync( [ in ] HSTRING url, [ out, retval ]Windows.Foundation.IAsyncOperation<IHttpResponse*>**async );
+    HRESULT PostAsync( [ in ] HSTRING url, [ out, retval ]Windows.Foundation.IAsyncOperation<IHttpResponse*>**async );
+  };
+
+  [ version( COMPONENT_VERSION ) ]
+  [ activatable( COMPONENT_VERSION ) ]
+  runtimeclass HttpClient{
+    [default] interface IHttpClient;
+  };
 
   declare{
     interface Windows.Foundation.IAsyncOperation<IHttpResponse*>;

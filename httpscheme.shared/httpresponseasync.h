@@ -38,25 +38,14 @@ protected://AsyncBase
   virtual void OnCancel( void ) {  }; // xhr->Cancel();
 };
 
-auto HttpGetJsonAsync( const wchar_t*url, IAsyncOperation<IHttpResponse*> ** )->HRESULT;
-auto http_get_json_async( wchar_t const*url, std::function<HRESULT(IHttpResponse*resp, HRESULT hr)>)->HRESULT;
-#if 0
-namespace web {
-  namespace http {
+auto HttpGetAsync( const wchar_t*url, IAsyncOperation<IHttpResponse*> ** )->HRESULT;
+auto http_get_async( wchar_t const*url, std::function<HRESULT(IHttpResponse*resp, HRESULT hr)>)->HRESULT;
 
-    struct HttpRequest : public RuntimeClass<IInspectable> {
-
-    };
-    //[Guid("08FF6CE4-ECF4-4333-9DD2-F9613CD82551")]
-    struct __declspec( uuid( "08FF6CE4-ECF4-4333-9DD2-F9613CD82551" ) ) __declspec( novtable ) IHttpFilter {
-      virtual HRESULT __stdcall SendRequestAsync( HttpRequest*, IAsyncOperation<HttpResponse*> ** ) = 0;
-    };
-
-    class HttpRequestCallback;
-    struct HttpClient : public RuntimeClass<IInspectable> {
-      virtual HRESULT __stdcall GetAsync( const wchar_t* url, IAsyncOperation<HttpResponse*> ** );
-    };
-  }
-}
-
-#endif
+using IHttpClient = ABI::bestv::web::IHttpClient;
+class HttpClient : public RuntimeClass < IHttpClient > {
+  InspectableClass( RuntimeClass_bestv_web_HttpClient, BaseTrust )
+public: // IHttpClient
+  STDMETHODIMP PostAsync( HSTRING, IAsyncOperation<IHttpResponse*> ** );
+  STDMETHODIMP GetAsync( HSTRING, IAsyncOperation<IHttpResponse*> ** );
+};
+ActivatableClass( HttpClient );
