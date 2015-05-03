@@ -21,6 +21,11 @@ public://IHttpResponse
   STDMETHODIMP BodyJson( ABI::Windows::Data::Json::IJsonValue **body ) {
     return content_json( this->body, body );
   }
+  STDMETHODIMP BodyText( HSTRING *text ) {
+    auto ct = header( L"CONTENT-TYPE" );
+    auto x = http_content_utf8( ct, body );
+    return WindowsCreateString( x.data(), static_cast<UINT32>(x.size()), text );
+  }
   STDMETHODIMP Status( int *status, HSTRING *phrase ) {
     *status = this->status;
     return phrase?
@@ -33,4 +38,10 @@ protected:
   int                                       status = 0; // 0: uninitialized
   std::wstring                              phrase;
   long                                      result = S_OK;
+
+private:
+  auto header( std::wstring const&name )->std::wstring {
+    auto i = headers.find( name );
+    return i == headers.end() ? std::wstring() : i->second;
+  }
 };

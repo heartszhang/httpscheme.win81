@@ -28,7 +28,7 @@ auto http_get_json_async( wchar_t const*url
   if ( ok( hr ) )
     hr = xhr->SetProperty( XHR_PROP_NO_CRED_PROMPT, 1 );
   if ( ok( hr ) )
-    hr = xhr->SetProperty( XHR_PROP_TIMEOUT, 10 * 1000 );//10 secs
+    hr = xhr->SetProperty( XHR_PROP_TIMEOUT, 30 * 1000 );//30 secs
 #ifdef XHR_PROP_ONDATA_NEVER
   if ( ok( hr ) )
     hr = xhr->SetProperty( XHR_PROP_ONDATA_THRESHOLD, XHR_PROP_ONDATA_NEVER );

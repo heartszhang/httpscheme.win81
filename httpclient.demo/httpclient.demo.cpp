@@ -11,7 +11,7 @@ namespace bestv { namespace web {
 
 int main_imp() {
   ComPtr<IAsyncOperation<IHttpResponse*>> async;
-  auto hr = HttpGetJsonAsync( L"http://testbox01.chinacloudapp.cn:8080/epg/XboxService/QueryPosition?Code=XBOX_POSITION_1", async.ReleaseAndGetAddressOf() );
+  auto hr = HttpGetJsonAsync( L"http://www.cnbeta.com/articles/390467.htm", async.ReleaseAndGetAddressOf() );
   if ( failed( hr ) )
     return hr;
   hr = async->put_Completed( Callback<IAsyncOperationCompletedHandler<IHttpResponse*>>( []( IAsyncOperation<IHttpResponse*> *handler, AsyncStatus  ) {
@@ -20,7 +20,9 @@ int main_imp() {
     int status = 0;
     if ( ok( hr ) )
       hr =  result->Status( &status, nullptr ) ;
-    dump( L"http-status:%d\n", status );
+    HString body;
+    hr = result->BodyText(body.GetAddressOf());
+    dump( body.GetRawBuffer( nullptr ) );
     return hr;
   } ).Get() );
   return hr;

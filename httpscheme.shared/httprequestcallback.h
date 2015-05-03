@@ -20,7 +20,7 @@ public:  //IXMLHTTPRequest2Callback
     return hr;
   }
   STDMETHODIMP OnDataAvailable( IXMLHTTPRequest2*, ISequentialStream* ) { return S_OK; }
-  STDMETHODIMP OnResponseReceived( IXMLHTTPRequest2* xhr, ISequentialStream*stream ) {
+  STDMETHODIMP OnResponseReceived( IXMLHTTPRequest2* , ISequentialStream*stream ) {
     auto body = read_full( stream );
     auto hr = _complete ? _complete( _status, _phrase.c_str(), _headers.c_str(), body ) : E_ILLEGAL_METHOD_CALL;
     _complete = nullptr; // break cyclic reference

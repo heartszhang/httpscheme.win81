@@ -15,6 +15,7 @@ namespace bestv{namespace web{
   interface IHttpResponse : IInspectable {
     HRESULT GetHeader( [ in ] HSTRING name, [ out, retval ] HSTRING* value);
     HRESULT BodyJson( [ out ] Windows.Data.Json.IJsonValue** body);
+    HRESULT BodyText( [ out ]HSTRING*body );
     HRESULT Status( [ out ] int*status, [ out ] HSTRING*phrase );
 //    HRESULT Result( );
   }

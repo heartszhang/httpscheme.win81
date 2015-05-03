@@ -8,9 +8,7 @@ struct HttpResponseAsyncOperation : RuntimeClass<AsyncBase<HttpResponseHandlerTy
   HttpResponseAsyncOperation() {
     Start();
   }
-  virtual ~HttpResponseAsyncOperation() {
-    dump( L"HttpResponseAsyncOperation::dtor\n" );
-  }
+
 public: //IAsyncOperation<IHttpResponse*>
   STDMETHODIMP put_Completed( HttpResponseHandlerType *handler ) { return PutOnComplete( handler ); }
   STDMETHODIMP get_Completed( HttpResponseHandlerType **handler ) { return GetOnComplete( handler ); }
@@ -18,7 +16,7 @@ public: //IAsyncOperation<IHttpResponse*>
     auto hr = CheckValidStateForResultsCall();
     if ( ok( hr ) )
       hr = this->result.CopyTo( result );
-      
+    
     return hr;
   }
 public:
@@ -36,12 +34,8 @@ protected:
 
 protected://AsyncBase
   virtual HRESULT OnStart( void ) { return S_OK; }
-  virtual void OnClose( void ) {
-    dump( L"IAsyncOperation<IHttpResponse*>::OnClose\n" );
-  };
-  virtual void OnCancel( void ) {
-    dump( L"IAsyncOperation<IHttpResponse*>::OnCancel\n" );    
-  };
+  virtual void OnClose( void ) {  }; // 
+  virtual void OnCancel( void ) {  }; // xhr->Cancel();
 };
 
 auto HttpGetJsonAsync( const wchar_t*url, IAsyncOperation<IHttpResponse*> ** )->HRESULT;
