@@ -1,0 +1,20 @@
+import "inspectable.idl";
+import "Windows.Foundation.idl";
+#define COMPONENT_VERSION 1.0
+//This file name Demo.idl must match Project name and root namespace exactly, Demo.idl = Demo.vcxproj = Demo. case sensitive
+namespace demo{namespace dot{
+  interface IDummy;
+  runtimeclass Dummy;
+  [uuid(7DCCD41A-94B6-49BE-ACD6-3A306D2C427D)]
+  [version(COMPONENT_VERSION)]
+  [exclusiveto(Dummy)]
+  interface IDummy : IInspectable {
+    HRESULT Hello( [in] int a, [in] int b, [out, retval] int* value );
+  };
+
+  [version(COMPONENT_VERSION)]
+  [activatable(COMPONENT_VERSION)]
+  runtimeclass Dummy{
+    [default] interface IDummy;
+  }
+}}

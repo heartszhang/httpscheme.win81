@@ -4,9 +4,9 @@
 
 
  /* File created by MIDL compiler version 8.00.0603 */
-/* at Fri May 01 18:07:16 2015
+/* at Sun May 03 18:04:34 2015
  */
-/* Compiler settings for C:\Users\Hearts\AppData\Local\Temp\httpclient.demo.idl-ad4a2637:
+/* Compiler settings for C:\Users\Hearts\AppData\Local\Temp\httpclient.demo.idl-532e0e3c:
     Oicf, W1, Zp8, env=Win64 (32b run), target_arch=AMD64 8.00.0603 
     protocol : dce , ms_ext, c_ext, robust
     error checks: allocation ref bounds_check enum stub_data 
@@ -61,6 +61,24 @@ namespace ABI {
 #endif /* __cplusplus */
 
 #endif 	/* ____x_ABI_Cbestv_Cweb_CIHttpResponse_FWD_DEFINED__ */
+
+
+#ifndef ____x_ABI_Cbestv_Cweb_CIHttpClient_FWD_DEFINED__
+#define ____x_ABI_Cbestv_Cweb_CIHttpClient_FWD_DEFINED__
+typedef interface __x_ABI_Cbestv_Cweb_CIHttpClient __x_ABI_Cbestv_Cweb_CIHttpClient;
+
+#ifdef __cplusplus
+namespace ABI {
+    namespace bestv {
+        namespace web {
+            interface IHttpClient;
+        } /* end namespace */
+    } /* end namespace */
+} /* end namespace */
+
+#endif /* __cplusplus */
+
+#endif 	/* ____x_ABI_Cbestv_Cweb_CIHttpClient_FWD_DEFINED__ */
 
 
 #ifndef ____FIAsyncOperationCompletedHandler_1_bestv__Cweb__CIHttpResponse_FWD_DEFINED__
@@ -250,6 +268,9 @@ EXTERN_C const IID IID___x_ABI_Cbestv_Cweb_CIHttpResponse;
                     virtual HRESULT STDMETHODCALLTYPE BodyJson( 
                         /* [out] */ ABI::Windows::Data::Json::IJsonValue **body) = 0;
                     
+                    virtual HRESULT STDMETHODCALLTYPE BodyText( 
+                        /* [out] */ HSTRING *body) = 0;
+                    
                     virtual HRESULT STDMETHODCALLTYPE Status( 
                         /* [out] */ int *status,
                         /* [out] */ HSTRING *phrase) = 0;
@@ -304,6 +325,10 @@ EXTERN_C const IID IID___x_ABI_Cbestv_Cweb_CIHttpResponse;
             __x_ABI_Cbestv_Cweb_CIHttpResponse * This,
             /* [out] */ __x_ABI_CWindows_CData_CJson_CIJsonValue **body);
         
+        HRESULT ( STDMETHODCALLTYPE *BodyText )( 
+            __x_ABI_Cbestv_Cweb_CIHttpResponse * This,
+            /* [out] */ HSTRING *body);
+        
         HRESULT ( STDMETHODCALLTYPE *Status )( 
             __x_ABI_Cbestv_Cweb_CIHttpResponse * This,
             /* [out] */ int *status,
@@ -348,6 +373,9 @@ EXTERN_C const IID IID___x_ABI_Cbestv_Cweb_CIHttpResponse;
 #define __x_ABI_Cbestv_Cweb_CIHttpResponse_BodyJson(This,body)	\
     ( (This)->lpVtbl -> BodyJson(This,body) ) 
 
+#define __x_ABI_Cbestv_Cweb_CIHttpResponse_BodyText(This,body)	\
+    ( (This)->lpVtbl -> BodyText(This,body) ) 
+
 #define __x_ABI_Cbestv_Cweb_CIHttpResponse_Status(This,status,phrase)	\
     ( (This)->lpVtbl -> Status(This,status,phrase) ) 
 
@@ -362,6 +390,183 @@ EXTERN_C const IID IID___x_ABI_Cbestv_Cweb_CIHttpResponse;
 #endif 	/* ____x_ABI_Cbestv_Cweb_CIHttpResponse_INTERFACE_DEFINED__ */
 
 
+/* interface __MIDL_itf_httpclient2Edemo_0000_0003 */
+/* [local] */ 
+
+#if !defined(____x_ABI_Cbestv_Cweb_CIHttpClient_INTERFACE_DEFINED__)
+extern const __declspec(selectany) _Null_terminated_ WCHAR InterfaceName_bestv_web_IHttpClient[] = L"bestv.web.IHttpClient";
+#endif /* !defined(____x_ABI_Cbestv_Cweb_CIHttpClient_INTERFACE_DEFINED__) */
+
+
+/* interface __MIDL_itf_httpclient2Edemo_0000_0003 */
+/* [local] */ 
+
+
+
+extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0003_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0003_v0_0_s_ifspec;
+
+#ifndef ____x_ABI_Cbestv_Cweb_CIHttpClient_INTERFACE_DEFINED__
+#define ____x_ABI_Cbestv_Cweb_CIHttpClient_INTERFACE_DEFINED__
+
+/* interface __x_ABI_Cbestv_Cweb_CIHttpClient */
+/* [uuid][object] */ 
+
+
+
+/* interface ABI::bestv::web::IHttpClient */
+/* [uuid][object] */ 
+
+
+EXTERN_C const IID IID___x_ABI_Cbestv_Cweb_CIHttpClient;
+
+#if defined(__cplusplus) && !defined(CINTERFACE)
+    } /* end extern "C" */
+    namespace ABI {
+        namespace bestv {
+            namespace web {
+                
+                MIDL_INTERFACE("8762F4B5-7583-49A1-97F4-68A518268D12")
+                IHttpClient : public IInspectable
+                {
+                public:
+                    virtual HRESULT STDMETHODCALLTYPE GetAsync( 
+                        /* [in] */ HSTRING url,
+                        /* [out][retval] */ __FIAsyncOperation_1_bestv__Cweb__CIHttpResponse **async) = 0;
+                    
+                    virtual HRESULT STDMETHODCALLTYPE PostAsync( 
+                        /* [in] */ HSTRING url,
+                        /* [out][retval] */ __FIAsyncOperation_1_bestv__Cweb__CIHttpResponse **async) = 0;
+                    
+                };
+
+                extern const __declspec(selectany) IID & IID_IHttpClient = __uuidof(IHttpClient);
+
+                
+            }  /* end namespace */
+        }  /* end namespace */
+    }  /* end namespace */
+    extern "C" { 
+    
+#else 	/* C style interface */
+
+    typedef struct __x_ABI_Cbestv_Cweb_CIHttpClientVtbl
+    {
+        BEGIN_INTERFACE
+        
+        HRESULT ( STDMETHODCALLTYPE *QueryInterface )( 
+            __x_ABI_Cbestv_Cweb_CIHttpClient * This,
+            /* [in] */ REFIID riid,
+            /* [annotation][iid_is][out] */ 
+            _COM_Outptr_  void **ppvObject);
+        
+        ULONG ( STDMETHODCALLTYPE *AddRef )( 
+            __x_ABI_Cbestv_Cweb_CIHttpClient * This);
+        
+        ULONG ( STDMETHODCALLTYPE *Release )( 
+            __x_ABI_Cbestv_Cweb_CIHttpClient * This);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetIids )( 
+            __x_ABI_Cbestv_Cweb_CIHttpClient * This,
+            /* [out] */ ULONG *iidCount,
+            /* [size_is][size_is][out] */ IID **iids);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetRuntimeClassName )( 
+            __x_ABI_Cbestv_Cweb_CIHttpClient * This,
+            /* [out] */ HSTRING *className);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetTrustLevel )( 
+            __x_ABI_Cbestv_Cweb_CIHttpClient * This,
+            /* [out] */ TrustLevel *trustLevel);
+        
+        HRESULT ( STDMETHODCALLTYPE *GetAsync )( 
+            __x_ABI_Cbestv_Cweb_CIHttpClient * This,
+            /* [in] */ HSTRING url,
+            /* [out][retval] */ __FIAsyncOperation_1_bestv__Cweb__CIHttpResponse **async);
+        
+        HRESULT ( STDMETHODCALLTYPE *PostAsync )( 
+            __x_ABI_Cbestv_Cweb_CIHttpClient * This,
+            /* [in] */ HSTRING url,
+            /* [out][retval] */ __FIAsyncOperation_1_bestv__Cweb__CIHttpResponse **async);
+        
+        END_INTERFACE
+    } __x_ABI_Cbestv_Cweb_CIHttpClientVtbl;
+
+    interface __x_ABI_Cbestv_Cweb_CIHttpClient
+    {
+        CONST_VTBL struct __x_ABI_Cbestv_Cweb_CIHttpClientVtbl *lpVtbl;
+    };
+
+    
+
+#ifdef COBJMACROS
+
+
+#define __x_ABI_Cbestv_Cweb_CIHttpClient_QueryInterface(This,riid,ppvObject)	\
+    ( (This)->lpVtbl -> QueryInterface(This,riid,ppvObject) ) 
+
+#define __x_ABI_Cbestv_Cweb_CIHttpClient_AddRef(This)	\
+    ( (This)->lpVtbl -> AddRef(This) ) 
+
+#define __x_ABI_Cbestv_Cweb_CIHttpClient_Release(This)	\
+    ( (This)->lpVtbl -> Release(This) ) 
+
+
+#define __x_ABI_Cbestv_Cweb_CIHttpClient_GetIids(This,iidCount,iids)	\
+    ( (This)->lpVtbl -> GetIids(This,iidCount,iids) ) 
+
+#define __x_ABI_Cbestv_Cweb_CIHttpClient_GetRuntimeClassName(This,className)	\
+    ( (This)->lpVtbl -> GetRuntimeClassName(This,className) ) 
+
+#define __x_ABI_Cbestv_Cweb_CIHttpClient_GetTrustLevel(This,trustLevel)	\
+    ( (This)->lpVtbl -> GetTrustLevel(This,trustLevel) ) 
+
+
+#define __x_ABI_Cbestv_Cweb_CIHttpClient_GetAsync(This,url,async)	\
+    ( (This)->lpVtbl -> GetAsync(This,url,async) ) 
+
+#define __x_ABI_Cbestv_Cweb_CIHttpClient_PostAsync(This,url,async)	\
+    ( (This)->lpVtbl -> PostAsync(This,url,async) ) 
+
+#endif /* COBJMACROS */
+
+
+#endif 	/* C style interface */
+
+
+
+
+#endif 	/* ____x_ABI_Cbestv_Cweb_CIHttpClient_INTERFACE_DEFINED__ */
+
+
+/* interface __MIDL_itf_httpclient2Edemo_0000_0004 */
+/* [local] */ 
+
+#ifdef __cplusplus
+namespace ABI {
+namespace bestv {
+namespace web {
+class HttpClient;
+} /*web*/
+} /*bestv*/
+}
+#endif
+
+#ifndef RUNTIMECLASS_bestv_web_HttpClient_DEFINED
+#define RUNTIMECLASS_bestv_web_HttpClient_DEFINED
+extern const __declspec(selectany) _Null_terminated_ WCHAR RuntimeClass_bestv_web_HttpClient[] = L"bestv.web.HttpClient";
+#endif
+
+
+/* interface __MIDL_itf_httpclient2Edemo_0000_0004 */
+/* [local] */ 
+
+
+
+
+extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0004_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0004_v0_0_s_ifspec;
+
 /* interface __MIDL_itf_httpclient2Edemo_0000_0264 */
 
 
@@ -375,7 +580,7 @@ EXTERN_C const IID IID___x_ABI_Cbestv_Cweb_CIHttpResponse;
 extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0264_v0_0_c_ifspec;
 extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0264_v0_0_s_ifspec;
 
-/* interface __MIDL_itf_httpclient2Edemo_0000_0004 */
+/* interface __MIDL_itf_httpclient2Edemo_0000_0005 */
 /* [local] */ 
 
 #ifndef DEF___FIAsyncOperationCompletedHandler_1_bestv__Cweb__CIHttpResponse
@@ -384,14 +589,14 @@ extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0264_v0_0_s_ifspec;
 
 
 
-/* interface __MIDL_itf_httpclient2Edemo_0000_0004 */
+/* interface __MIDL_itf_httpclient2Edemo_0000_0005 */
 /* [local] */ 
 
 
 
 
-extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0004_v0_0_c_ifspec;
-extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0004_v0_0_s_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0005_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0005_v0_0_s_ifspec;
 
 #ifndef ____FIAsyncOperationCompletedHandler_1_bestv__Cweb__CIHttpResponse_INTERFACE_DEFINED__
 #define ____FIAsyncOperationCompletedHandler_1_bestv__Cweb__CIHttpResponse_INTERFACE_DEFINED__
@@ -480,20 +685,20 @@ EXTERN_C const IID IID___FIAsyncOperationCompletedHandler_1_bestv__Cweb__CIHttpR
 #endif 	/* ____FIAsyncOperationCompletedHandler_1_bestv__Cweb__CIHttpResponse_INTERFACE_DEFINED__ */
 
 
-/* interface __MIDL_itf_httpclient2Edemo_0000_0005 */
+/* interface __MIDL_itf_httpclient2Edemo_0000_0006 */
 /* [local] */ 
 
 #endif /* pinterface */
 #endif /* DEF___FIAsyncOperationCompletedHandler_1_bestv__Cweb__CIHttpResponse */
 
 
-/* interface __MIDL_itf_httpclient2Edemo_0000_0005 */
+/* interface __MIDL_itf_httpclient2Edemo_0000_0006 */
 /* [local] */ 
 
 
 
-extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0005_v0_0_c_ifspec;
-extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0005_v0_0_s_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0006_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0006_v0_0_s_ifspec;
 
 /* interface __MIDL_itf_httpclient2Edemo_0000_0265 */
 
@@ -508,7 +713,7 @@ extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0005_v0_0_s_ifspec;
 extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0265_v0_0_c_ifspec;
 extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0265_v0_0_s_ifspec;
 
-/* interface __MIDL_itf_httpclient2Edemo_0000_0006 */
+/* interface __MIDL_itf_httpclient2Edemo_0000_0007 */
 /* [local] */ 
 
 #ifndef DEF___FIAsyncOperation_1_bestv__Cweb__CIHttpResponse
@@ -516,13 +721,13 @@ extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0265_v0_0_s_ifspec;
 #if !defined(__cplusplus) || defined(RO_NO_TEMPLATE_NAME)
 
 
-/* interface __MIDL_itf_httpclient2Edemo_0000_0006 */
+/* interface __MIDL_itf_httpclient2Edemo_0000_0007 */
 /* [local] */ 
 
 
 
-extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0006_v0_0_c_ifspec;
-extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0006_v0_0_s_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0007_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0007_v0_0_s_ifspec;
 
 #ifndef ____FIAsyncOperation_1_bestv__Cweb__CIHttpResponse_INTERFACE_DEFINED__
 #define ____FIAsyncOperation_1_bestv__Cweb__CIHttpResponse_INTERFACE_DEFINED__
@@ -652,20 +857,20 @@ EXTERN_C const IID IID___FIAsyncOperation_1_bestv__Cweb__CIHttpResponse;
 #endif 	/* ____FIAsyncOperation_1_bestv__Cweb__CIHttpResponse_INTERFACE_DEFINED__ */
 
 
-/* interface __MIDL_itf_httpclient2Edemo_0000_0007 */
+/* interface __MIDL_itf_httpclient2Edemo_0000_0008 */
 /* [local] */ 
 
 #endif /* pinterface */
 #endif /* DEF___FIAsyncOperation_1_bestv__Cweb__CIHttpResponse */
 
 
-/* interface __MIDL_itf_httpclient2Edemo_0000_0007 */
+/* interface __MIDL_itf_httpclient2Edemo_0000_0008 */
 /* [local] */ 
 
 
 
-extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0007_v0_0_c_ifspec;
-extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0007_v0_0_s_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0008_v0_0_c_ifspec;
+extern RPC_IF_HANDLE __MIDL_itf_httpclient2Edemo_0000_0008_v0_0_s_ifspec;
 
 /* Additional Prototypes for ALL interfaces */
 

@@ -6,9 +6,9 @@
 #else
 #define CLSCTX_GENERAL CLSCTX_INPROC
 #endif
-auto http_request_async( wchar_t const*url
-                         , wchar_t const*method // GET/POST/HEAD/TRACE
-                         , std::function<HRESULT( IHttpResponse*resp, HRESULT hr )> worker )->HRESULT;
+
+ActivatableClass( HttpClient );
+
 auto http_post_async( wchar_t const*url, std::function<HRESULT( IHttpResponse*resp, HRESULT hr )> worker )->HRESULT {
   return http_request_async( url, L"POST", worker );
 }

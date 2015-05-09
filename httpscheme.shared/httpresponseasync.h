@@ -37,6 +37,9 @@ protected://AsyncBase
   virtual void OnClose( void ) {  }; // 
   virtual void OnCancel( void ) {  }; // xhr->Cancel();
 };
+auto http_request_async( wchar_t const*url
+                         , wchar_t const*method // GET/POST/HEAD/TRACE
+                         , std::function<HRESULT( IHttpResponse*resp, HRESULT hr )> worker )->HRESULT;
 
 auto HttpGetAsync( const wchar_t*url, IAsyncOperation<IHttpResponse*> ** )->HRESULT;
 auto http_get_async( wchar_t const*url, std::function<HRESULT(IHttpResponse*resp, HRESULT hr)>)->HRESULT;
@@ -48,4 +51,3 @@ public: // IHttpClient
   STDMETHODIMP PostAsync( HSTRING, IAsyncOperation<IHttpResponse*> ** );
   STDMETHODIMP GetAsync( HSTRING, IAsyncOperation<IHttpResponse*> ** );
 };
-ActivatableClass( HttpClient );
