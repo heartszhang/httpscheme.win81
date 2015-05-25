@@ -44,6 +44,7 @@ dlldata.c
 *_p.c
 *_i.h
 *.ilk
+*_h.h
 *.meta
 *.obj
 *.pch
